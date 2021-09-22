@@ -1,0 +1,119 @@
+<html xmlns:th="http://www.thymeleaf.org">
+<style type="text/css">
+    @import url(https://fonts.googleapis.com/css?family=Montserrat);
+</style>
+<div style="background: #ebebeb;margin: 0;font-family: Montserrat;font-size: 14px;color: #333;">
+    
+    <div style="text-align:center;background: #fff;padding: 10px 0;">
+        <div style="max-width: 600px;margin: 0 auto;">
+            <img src="http://cdn.30usd.com/email/templates/ordered/images/logo-burger.png" alt="Logo">
+        </div>
+    </div>
+    <div>
+        <div>
+            <div style="max-height: 360px;overflow: hidden;">
+                <div style="max-width: 600px;margin: 0 auto;">
+                    <img src="http://cdn.30usd.com/email/templates/ordered/images/banner.png" alt="Banner">
+                </div>
+            </div>
+            <div style="background: #09517f;color: #fff;padding: 15px 0;">
+                <div style="max-width: 600px;margin: 0 auto;">
+                    <h2 style="margin: 0;padding: 30px 0 0;color: #fff;text-align: center;">Thank You For Your Purchase!</h2>
+                    <p style="text-align: center;">Your order is under processing. We will fulfill your order following below timeline:</p>
+                    <img src="http://cdn.30usd.com/email/templates/ordered/images/status.png">
+                </div>
+            </div>
+            <!-- Order info -->
+            <div style="padding: 30px 0;    background: #fff;">
+                <div style="max-width: 600px;margin: 0 auto;">
+                    <h3 style="text-align: left;text-transform: uppercase;color:#09517f;">Order Summary</h3>
+
+                    <div style="clear:both;">
+                        <ul style="padding:0;">
+                            <li th:each="orderItem : ${orderItemList}" style="clear: both;list-style: none;border-bottom: 1px solid #ddd;width: 100%;padding: 10px 0;display: inline-block;">
+                                <div style="float: left;border: 1px solid #ddd;max-width: 70px;margin-right: 15px;">
+                                    <img th:src="${orderItem.get('variant_image')}" style="width: 100%;">
+                                </div>
+                                <div style="width: 50%;float: left;color: #333;font-weight: 700;">
+                                    <p style="margin:0;" th:text="${orderItem.get('variant_name')}"/>
+                                    <p style="color: #666;font-weight: 400;font-size: 13px;">Shipping</p>
+									<div style="font-size:12px;">
+										<span style="color: #09517f;">Expected Arrival:&nbsp;</span> <b th:text="${orderItem.get('expected_arrival')}"/>
+									</div>
+                                </div>
+                                <div style="float: right;text-align: right;">
+                                    <p style="margin:0;"><span th:text="${orderItem.get('quantity')}"/>&nbsp;x&nbsp;<b th:text="${orderCurrency}" style="color: #333;"/><b th:text="${orderItem.get('price')}" style="color: #333;"/></p>
+                                    <p>+&nbsp;<b th:text="${orderCurrency}" style="color: #333;"/><b th:text="${orderItem.get('shipping_fee')}" style="color: #333;"/></p>
+                                </div>
+								<div style="clear:both;"></div>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div style="float: right;color: #333;font-weight: 700;">
+                        <dl style="display: inline-block; margin:0;">
+                            <dt style="float: left;width: 60%;text-align: left;padding: 5px 0;">Shipping Fees</dt>
+                            <dd style="float: right;padding: 5px 0;"><span th:text="${orderCurrency}"/><span th:text="${shippingFees}"/></dd>
+                            <dt style="float: left;width: 60%;text-align: left;padding: 5px 0;">Sub-total</dt>
+                            <dd style="float: right;padding: 5px 0;"><span th:text="${orderCurrency}"/><span th:text="${subTotalAmount}"/></dd>
+							<hr style="clear:both;border-color: #ddd;border-top: 0;">
+                            <dt style="float: left;width: 60%;text-align: left;padding: 5px 0;color: #09517f;text-transform: uppercase; ">Total</dt>
+                            <dd style="float: right;padding: 5px 0;color:red;"><span th:text="${orderCurrency}"/><span th:text="${orderAmount}"/></dd>
+                        </dl>
+                    </div>
+                    <div style="clear:both;"></div>
+                </div>
+            </div>
+            <!-- Shipping Add -->
+            <div style="background: #d8eefc;padding: 30px 0;">
+                <div style="max-width: 600px;margin: 0 auto;">
+                    <h3 style="padding: 0;margin: 0;color: #333;text-transform: uppercase;">Shipping Address</h3>
+                    <div>
+                        <p th:text="${shippingLine1}"/>
+                        <p th:text="${shippingLine2}"/>
+                        <p th:text="${shippingCountry}"/>
+                    </div>
+                </div>
+            </div>
+            <div style="text-align: center;padding: 10px 0;background: #fff;">
+                <div style="max-width: 600px;margin: 0 auto;">
+                    <h3 style="color: #707070;margin: 0;font-size: 24px;">Useful Links</h3>
+                    <ul style="padding: 0;">
+                        <li style="list-style: none;padding: 5px 0;"><a style="color: #09517f;text-decoration: none;" href="#">Where can i track my order?</a></li>
+                        <li style="list-style: none;padding: 5px 0;"><a style="color: #09517f;text-decoration: none;" href="#">How does my order get printed?</a></li>
+                        <li style="list-style: none;padding: 5px 0;"><a style="color: #09517f;text-decoration: none;" href="#">Where is my order printed?</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div style="background: #ebebeb;text-align: center;">
+        <div style="max-width: 600px;margin: 0 auto;">
+            <ul style="padding:0;display: inline-block;">
+                <li style="list-style: none;float: left;margin: 0 15px;">
+                    <a href="#">
+                        <img src="http://cdn.30usd.com/email/templates/ordered/images/facebook.png">
+                    </a>
+                </li>
+                <li style="list-style: none;float: left;margin: 0 15px;">
+                    <a href="#">
+                        <img src="http://cdn.30usd.com/email/templates/ordered/images/tw.png">
+                    </a>
+                </li>
+                <li style="list-style: none;float: left;margin: 0 15px;">
+                    <a href="#">
+                        <img src="http://cdn.30usd.com/email/templates/ordered/images/in.png">
+                    </a>
+                </li>
+                <li style="list-style: none;float: left;margin: 0 15px;">
+                    <a href="#">
+                        <img src="http://cdn.30usd.com/email/templates/ordered/images/pin.png">
+                    </a>
+                </li>
+            </ul>
+            <div style="clear: both;"></div>
+            <p>© 2017 BurgerPrint, Inc.</p>
+        </div>
+    </div>
+</div>
+</html>
