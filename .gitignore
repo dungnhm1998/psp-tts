@@ -1,0 +1,12 @@
+/target/
+.settings/org.eclipse.m2e.core.prefs
+.settings/org.eclipse.jdt.core.prefs
+hs_err_pid1204.log
+.project
+.classpath
+.idea/*
+psp-api.iml
+src/main/main.iml
+src/test/test.iml
+/bin/
+.DS_Store
