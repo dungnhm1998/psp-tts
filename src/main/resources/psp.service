@@ -1,0 +1,23 @@
+[Unit]
+Description=psp
+Documentation=http://api.30usd.com/en/docs/
+After=network.target remote-fs.target nss-lookup.target
+
+[Service]
+ExecStart=/opt/jdk1.8.0_121/bin/java \
+ -XX:+UseG1GC -Xms20M -Xmx100M \
+ -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager \
+ -Dlog=/var/log/30usd/psp/psp.log \
+ -Dvertx.cacheDirBase=/opt/30usd/psp/ \
+ -Dvertx.cwd=/opt/30usd/psp/ \
+ -cp /opt/30usd/psp/classes:/opt/30usd/psp/libs/* \
+ asia.leadsgen.psp.main.PSPMain
+
+WorkingDirectory=/opt/30usd/psp
+
+User=psp
+Group=psp
+LimitNOFILE=30000
+
+[Install]
+WantedBy=multi-user.target

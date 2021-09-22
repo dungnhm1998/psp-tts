@@ -1,0 +1,10 @@
+-----Feature Art Store------
+Date: 02/05/2018
+
+- Add table TB_ART
+
+- Add table TB_ART_CATEGORY
+
+- Create package PKG_ART
+
+- Create package PKG_ART_CATEGORY

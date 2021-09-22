@@ -1,0 +1,769 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:mongo="http://www.springframework.org/schema/data/mongo"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans 
+       http://www.springframework.org/schema/beans/spring-beans-4.3.xsd        
+       http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd        
+       http://www.springframework.org/schema/context 
+       http://www.springframework.org/schema/context/spring-context-4.3.xsd
+       http://www.springframework.org/schema/data/mongo 
+       http://www.springframework.org/schema/data/mongo/spring-mongo.xsd">
+
+    <bean id="jedisConnectionFactoryDatabase0"
+              class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory"
+              p:hostName="127.0.0.1" p:port="6379" p:usePool="true" p:database="0" />
+
+    <bean id="jedisConnectionFactory"
+              class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory"
+              p:hostName="127.0.0.1" p:port="6379" p:usePool="true" p:database="1" />
+
+    <!-- Redis String Serializer -->
+    <bean id="stringRedisSerializer"
+              class="org.springframework.data.redis.serializer.StringRedisSerializer" />
+              
+    <!-- JDK Serialization Redis Serializer -->
+    <bean id="jdkSerializationRedisSerializer"
+              class="org.springframework.data.redis.serializer.JdkSerializationRedisSerializer" />
+              
+    <!-- Configuring the Redis Template -->
+    <bean id="redisTemplate"
+              class="org.springframework.data.redis.core.RedisTemplate"
+              p:connection-factory-ref="jedisConnectionFactory"
+              p:keySerializer-ref="stringRedisSerializer"
+              p:valueSerializer-ref="jdkSerializationRedisSerializer" />
+    <bean id="redisTemplateDatabase0"
+              class="org.springframework.data.redis.core.RedisTemplate"
+              p:connection-factory-ref="jedisConnectionFactoryDatabase0"
+              p:keySerializer-ref="stringRedisSerializer"
+              p:valueSerializer-ref="jdkSerializationRedisSerializer" />
+	<!--     
+		<bean
+	        class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+	        <property name="locations">
+	            <value>classpath:/app.properties</value>
+	        </property>
+	        <property name="systemPropertiesModeName"
+	                          value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
+	    </bean> 
+    -->
+    
+    <bean
+        class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+                <value>classpath:/app.properties</value>
+<!--                 <value>classpath:/host.properties</value> -->
+            </list>
+        </property>
+        <property name="systemPropertiesModeName"
+                          value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
+    </bean>
+    
+    <mongo:mongo-client id="mongoClient"
+                            host="127.0.0.1" />
+    <mongo:db-factory id="mongoDbFactory" dbname="psp"
+                          mongo-ref="mongoClient" />
+    <bean id="mongoTemplate"
+              class="org.springframework.data.mongodb.core.MongoTemplate">
+        <constructor-arg ref="mongoDbFactory" />
+    </bean>
+
+    <bean id="hikariConfig" 
+    		  class="com.zaxxer.hikari.HikariConfig">
+        <property name="dataSourceClassName"
+                          value="oracle.jdbc.pool.OracleDataSource" />
+        <property name="dataSourceProperties">
+            <props>
+                <prop key="url">${database.url}</prop>
+                <prop key="user">${database.username}</prop>
+                <prop key="password">${database.password}</prop>
+            </props>
+        </property>
+        <!-- <property name="initializationFailFast" value="false" /> -->
+        <property name="poolName" 
+        				  value="PSP_DB_POOL" />
+        <property name="minimumIdle"
+                          value="${database.min.pool.size}" />
+        <property name="maximumPoolSize"
+                          value="${database.max.pool.size}" />
+        <property name="idleTimeout" 
+        				  value="${database.idle.timeout}" />
+        <property name="validationTimeout"
+                          value="${database.validation.timeout}" />
+        <property name="connectionTimeout"
+                          value="${database.connection.timeout}" />
+        <property name="connectionTestQuery"
+                          value="${database.connection.testquery}" />
+        <!-- <property name="leakDetectionThreshold" value="${database.leak.detection.threshold}" /> -->
+    </bean>
+    
+    <bean id="pspDataSource"
+              class="com.zaxxer.hikari.HikariDataSource" destroy-method="close">
+        <constructor-arg ref="hikariConfig" />
+    </bean>
+    
+    <bean id="ISPUtil" 
+    		  class="asia.leadsgen.psp.util.ISPUtil">
+        <property name="ispAPIPrefix" value="${isp.service.base.url}" />
+        <property name="ispBaiduAPIPrefix" value="${isp.baidu.service.base.url}" />
+    </bean>
+    
+    <bean id="pspVertical"
+              class="asia.leadsgen.psp.server.vertical.PSPVertical">
+        <property name="serverHost" value="${server.host}" />
+        <property name="serverPort" value="${server.port}" />
+        <property name="apiPrefix" value="${server.api.uri.prefix}" />
+        <!-- 
+        <property name="apiPrefixV2"
+                          value="${server.api.uri.prefix.v2}" />
+        <property name="apiTokenPrefix"
+                          value="${server.api.uri.token.prefix}" />
+         -->
+        <property name="connectionKeepAlive"
+                          value="${server.connection.keepalive}" />
+        <property name="connectionTimeOut"
+                          value="${server.connection.timeout}" />
+        <property name="connectionIdleTimeOut"
+                          value="${server.connection.idle.timeout}" />
+    </bean>
+    
+    <bean id="pspServer" 
+    		  class="asia.leadsgen.psp.server.PSPServer"
+              init-method="init" depends-on="pspDataSource">
+        <property name="workerPoolSize"
+                          value="${server.worker.poolsize}" />
+        <property name="workerMaxExecuteTime"
+                          value="${server.worker.max.execute.time}" />
+        <property name="eventLoopPoolSize"
+                          value="${server.eventloop.poolsize}" />
+        <property name="eventLoopMaxExecuteTime"
+                          value="${server.eventloop.max.execute.time}" />
+        <property name="threadCheckInterval"
+                          value="${server.thread.checkinterval}" />
+        <property name="vertxVertical" ref="pspVertical" />
+    </bean>
+    
+    <bean id="ispServiceConfig"
+              class="asia.leadsgen.psp.util.HttpServiceConfig">
+        <property name="serviceName" value="${isp.service.name}" />
+        <property name="serviceRegion" value="${isp.service.region}" />
+        <property name="serviceURL" value="${isp.service.base.url}" />
+        <property name="serviceAuthId"
+                          value="${isp.service.authorization.id}" />
+        <property name="serviceAuthKey"
+                          value="${isp.service.authorization.key}" />
+        <property name="serviceAuthType"
+                          value="${isp.service.authorization.type}" />
+        <property name="serviceAuthAlgorithm"
+                          value="${isp.service.authorization.algorithm}" />
+        <property name="serviceTimeOut"
+                          value="${isp.service.request.timeout}" />
+    </bean>
+    
+    <bean id="fspServiceConfig"
+              class="asia.leadsgen.psp.util.HttpServiceConfig">
+        <property name="serviceName" value="${fsp.service.name}" />
+        <property name="serviceRegion" value="${fsp.service.region}" />
+        <property name="serviceURL" value="${fsp.service.base.url}" />
+        <property name="serviceAuthId"
+                          value="${fsp.service.authorization.id}" />
+        <property name="serviceAuthKey"
+                          value="${fsp.service.authorization.key}" />
+        <property name="serviceAuthType"
+                          value="${fsp.service.authorization.type}" />
+        <property name="serviceAuthAlgorithm"
+                          value="${fsp.service.authorization.algorithm}" />
+        <property name="serviceTimeOut"
+                          value="${fsp.service.request.timeout}" />
+    </bean>
+    
+    <bean id="aspServiceConfig"
+              class="asia.leadsgen.psp.util.HttpServiceConfig">
+        <property name="serviceName" value="${asp.service.name}" />
+        <property name="serviceRegion" value="${asp.service.region}" />
+        <property name="serviceURL" value="${asp.service.base.url}" />
+        <property name="serviceAuthId"
+                          value="${asp.service.authorization.id}" />
+        <property name="serviceAuthKey"
+                          value="${asp.service.authorization.key}" />
+        <property name="serviceAuthType"
+                          value="${asp.service.authorization.type}" />
+        <property name="serviceAuthAlgorithm"
+                          value="${asp.service.authorization.algorithm}" />
+        <property name="serviceTimeOut"
+                          value="${asp.service.request.timeout}" />
+    </bean>
+    
+    <bean id="paymentConnectorServiceConfig" 
+    		  class="asia.leadsgen.psp.util.HttpServiceConfig">
+        <property name="serviceName"
+                          value="${payment.connector.service.name}" />
+        <property name="serviceRegion"
+                          value="${payment.connector.service.region}" />
+        <property name="serviceURL"
+                          value="${payment.connector.service.base.url}" />
+        <property name="serviceAuthId"
+                          value="${payment.connector.service.authorization.id}" />
+        <property name="serviceAuthKey"
+                          value="${payment.connector.service.authorization.key}" />
+        <property name="serviceAuthType"
+                          value="${payment.connector.service.authorization.type}" />
+        <property name="serviceAuthAlgorithm"
+                          value="${payment.connector.service.authorization.algorithm}" />
+        <property name="serviceTimeOut"
+                          value="${payment.connector.service.request.timeout}" />
+    </bean>
+    
+    <bean id="fraudHandler"
+              class="asia.leadsgen.psp.server.handler.fraud.FraudHandler">
+        <property name="fraudCheckEnable"
+                          value="${fraud.check.enable}" />
+        <property name="fspServiceConfig" ref="fspServiceConfig" />
+    </bean>
+    
+    <bean id="clientAuthorizationHandler"
+              class="asia.leadsgen.psp.server.handler.common.ClientAuthorizationHandler">
+        <property name="serviceName" value="${service.name}" />
+        <property name="serviceRegion" value="${service.region}" />
+        <property name="serviceAuthType"
+                          value="${service.authorization.type}" />
+        <property name="serviceAuthAlgorithm"
+                          value="${service.authorization.algorithm}" />
+    </bean>
+    
+    <bean id="sessionCreateHandler"
+              class="asia.leadsgen.psp.server.handler.session.SessionCreateHandler">
+        <property name="sessionExpireTime"
+                          value="${session.expire.time}" />
+        <property name="cookieExpireTime"
+                          value="${cookie.expire.time}" />
+        <property name="aspServiceConfig" ref="aspServiceConfig" />
+    </bean>
+
+    <bean id="sessionCheckingHandler"
+              class="asia.leadsgen.psp.server.handler.session.SessionCheckingHandler">
+        <property name="sessionExpireTime"
+                          value="${session.expire.time}" />
+        <property name="cookieExpireTime"
+                          value="${cookie.expire.time}" />
+    </bean>
+    
+    <bean id="responseHandler"
+              class="asia.leadsgen.psp.server.handler.common.ResponseHandler">
+        <property name="fraudCheckEnable"
+                          value="${fraud.check.enable}" />
+        <property name="fspServiceConfig" ref="fspServiceConfig" />
+    </bean>
+    
+    <bean id="exceptionHandler"
+              class="asia.leadsgen.psp.server.handler.common.ExceptionHandler">
+        <property name="fraudCheckEnable"
+                          value="${fraud.check.enable}" />
+        <property name="fspServiceConfig" ref="fspServiceConfig" />
+    </bean>
+    
+    <bean id="wooCommerceOrderHandler"
+              class="asia.leadsgen.psp.server.handler.dropship.shopify.WooCommerceOrderHandler">
+        <property name="paymentConnectorServiceConfig"
+                          ref="paymentConnectorServiceConfig" />
+    </bean>
+    
+    <bean id="dropshipPaymentExecuteHandler"
+              class="asia.leadsgen.psp.server.handler.dropship.payment.DropshipPaymentExecuteHandler">
+        <property name="paymentConnectorServiceConfig"
+                          ref="paymentConnectorServiceConfig" />
+        <property name="aspConnectorServiceConfig"
+                          ref="aspServiceConfig" />
+        <property name="paspAPIBaseURL" value="${payment.connector.service.base.url}" />
+        <property name="invoicerName" value="${payment.paypal.invoicer.name}" />
+        <property name="invoicerEmail" value="${payment.paypal.invoicer.email}" />
+        <property name="invoicerWebsite" value="${payment.paypal.invoicer.website}" />
+        <property name="invoicerTaxId" value="${payment.paypal.invoicer.tax.id}" />
+        <property name="invoicerLogoUrl" value="${payment.paypal.invoicer.logo.url}" />                     
+    </bean>
+    
+    <bean id="dropshipPaymentExecuteV2Handler"
+              class="asia.leadsgen.psp.server.handler.dropship.payment.DropshipPaymentExecuteV2Handler">
+        <property name="paymentConnectorServiceConfig"
+                          ref="paymentConnectorServiceConfig" />
+        <property name="aspConnectorServiceConfig"
+                          ref="aspServiceConfig" />
+        <property name="paspAPIBaseURL" value="${payment.connector.service.base.url}" />
+        <property name="invoicerName" value="${payment.paypal.invoicer.name}" />
+        <property name="invoicerEmail" value="${payment.paypal.invoicer.email}" />
+        <property name="invoicerWebsite" value="${payment.paypal.invoicer.website}" />
+        <property name="invoicerTaxId" value="${payment.paypal.invoicer.tax.id}" />
+        <property name="invoicerLogoUrl" value="${payment.paypal.invoicer.logo.url}" />                     
+    </bean>
+    
+  	<bean id="dropshipOrderRefundHandler"
+          class="asia.leadsgen.psp.server.handler.dropship.order.DropshipOrderRefundHandler">
+       <property name="paymentConnectorServiceConfig"
+                          ref="paymentConnectorServiceConfig" />
+    </bean>
+    
+    <bean id="shopifyOrderRefundHandler"
+              class="asia.leadsgen.psp.server.handler.dropship.order.ShopifyOrderRefundHandler">
+        <property name="paymentConnectorServiceConfig"
+                          ref="paymentConnectorServiceConfig" />
+    </bean>
+	
+    <bean id="shopbaseOrderRefundHandler"
+              class="asia.leadsgen.psp.server.handler.dropship.order.ShopbaseOrderRefundHandler">
+        <property name="paymentConnectorServiceConfig"
+                          ref="paymentConnectorServiceConfig" />
+    </bean>
+        
+    <bean id="paymentCreateInvoiceHandler"
+              class="asia.leadsgen.psp.server.handler.payment.PaypalCreateInvoiceHandler">
+        <property name="paymentConnectorServiceConfig"	
+        				  ref="paymentConnectorServiceConfig" />
+        <property name="invoicerName" value="${payment.paypal.invoicer.name}" />
+        <property name="invoicerEmail" value="${payment.paypal.invoicer.email}" />
+        <property name="invoicerWebsite" value="${payment.paypal.invoicer.website}" />
+        <property name="invoicerTaxId" value="${payment.paypal.invoicer.tax.id}" />
+        <property name="invoicerLogoUrl" value="${payment.paypal.invoicer.logo.url}" />
+    </bean>
+    
+    <bean id="shopifyConnectHandler"
+              class="asia.leadsgen.psp.server.handler.dropship.shopify.ShopifyConnectHandler">
+        <property name="apiKey" value="${shopify.api.key}" />
+        <property name="redirectUrl"
+                          value="${shopify.redirect.url.connect.store}" />
+        <property name="scope" value="${shopify.app.scope}" />
+    </bean>
+    
+    <bean id="shopifyConnectAuthHandler"
+              class="asia.leadsgen.psp.server.handler.dropship.shopify.ShopifyConnectAuthHandler">
+        <property name="apiKey" value="${shopify.api.key}" />
+        <property name="secretKey" value="${shopify.secret.key}" />
+        <property name="url" value="${shopify.api.base.url}" />
+    </bean>
+
+    <bean id="shopbaseConnectHandler"
+              class="asia.leadsgen.psp.server.handler.dropship.shopbase.ShopbaseConnectHandler">
+        <property name="apiKey" value="${shopbase.api.key}" />
+        <property name="redirectUrl"
+                          value="${shopbase.redirect.url.connect.store}" />
+        <property name="scope" value="${shopbase.app.scope}" />
+    </bean>
+    
+    <bean id="shopbaseConnectAuthHandler"
+              class="asia.leadsgen.psp.server.handler.dropship.shopbase.ShopbaseConnectAuthHandler">
+        <property name="apiKey" value="${shopbase.api.key}" />
+        <property name="secretKey" value="${shopbase.secret.key}" />
+        <property name="url" value="${shopbase.api.base.url}" />
+    </bean>
+    
+    <bean id="wooConnectAuthHandler" 
+    		  class="asia.leadsgen.psp.server.handler.dropship.shopify.WooEcommerceConnectAuthHandler">
+        <property name="url" value="${woo.api.base.url}" />
+    </bean>
+
+    <bean id="systemPreferencesService"
+              class="asia.leadsgen.psp.service.PreferencesService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="clientService"
+              class="asia.leadsgen.psp.service.ClientService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="userService"
+              class="asia.leadsgen.psp.service.UserService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="sessionService"
+              class="asia.leadsgen.psp.service.SessionService">
+        <property name="dataSource" ref="pspDataSource" />
+        <property name="sessionExpireTime"
+                          value="${session.expire.time}" />
+    </bean>
+    
+    <bean id="baseServiceFF"
+              class="asia.leadsgen.psp.service_fulfill.BaseService">
+        <property name="dataSource" ref="pspDataSource" />
+        <property name="redisTemplate" ref="redisTemplate" />
+    </bean>
+    
+    <bean id="baseSizeService"
+              class="asia.leadsgen.psp.service.BaseSizeService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="baseSizeServiceFF"
+              class="asia.leadsgen.psp.service_fulfill.BaseSizeService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="baseColorService"
+              class="asia.leadsgen.psp.service.BaseColorService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="baseColorServiceFF"
+              class="asia.leadsgen.psp.service_fulfill.BaseColorService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="designService"
+              class="asia.leadsgen.psp.service.DesignService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="imageService"
+              class="asia.leadsgen.psp.service.ImageService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="campaignService"
+              class="asia.leadsgen.psp.service.CampaignService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="productService"
+              class="asia.leadsgen.psp.service.ProductService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="productPriceService"
+              class="asia.leadsgen.psp.service.ProductPriceService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="productDesignService"
+              class="asia.leadsgen.psp.service.ProductDesignService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="productVariantService"
+              class="asia.leadsgen.psp.service.ProductVariantService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="mockupService"
+              class="asia.leadsgen.psp.service.MockupService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="categoryService"
+              class="asia.leadsgen.psp.service.CategoryService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="domainService"
+              class="asia.leadsgen.psp.service.DomainService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="promotionService"
+              class="asia.leadsgen.psp.service.PromotionService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="orderService"
+              class="asia.leadsgen.psp.service.OrderService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="orderProductService"
+              class="asia.leadsgen.psp.service.OrderProductService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="shippingService"
+              class="asia.leadsgen.psp.service.ShippingService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="shippingFeeService"
+              class="asia.leadsgen.psp.service.ShippingFeeService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="paymentService"
+              class="asia.leadsgen.psp.service.PaymentService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="emailTemplateService"
+              class="asia.leadsgen.psp.service.EmailTemplateService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="emailMarketingService"
+              class="asia.leadsgen.psp.service.EmailMarketingService">
+        <property name="mongoTemplate" ref="mongoTemplate" />
+    </bean>
+    
+    <bean id="payoutService"
+              class="asia.leadsgen.psp.service.PayoutService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="redisService"
+              class="asia.leadsgen.psp.service.RedisService">
+        <property name="redisTemplate" ref="redisTemplate" />
+        <property name="redisDefaultExprireTime"
+                          value="${redis.expire.time}" />
+    </bean>
+    
+    <bean id="redisServiceFF"
+              class="asia.leadsgen.psp.service_fulfill.RedisService">
+        <property name="redisTemplate" ref="redisTemplate" />
+        <property name="redisDefaultExprireTime"
+                          value="${redis.expire.time}" />
+    </bean>
+    
+    <bean id="redisDatabase0Service"
+              class="asia.leadsgen.psp.service.RedisDatabase0Service">
+        <property name="redisTemplateDatabase0"
+                          ref="redisTemplateDatabase0" />
+        <property name="redisDefaultExprireTime"
+                          value="${redis.expire.time}" />
+    </bean>
+    
+    <bean id="shopifyService"
+              class="asia.leadsgen.psp.service_fulfill.ShopifyService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="dropshipStoreService"
+              class="asia.leadsgen.psp.service_fulfill.DropShipStoreService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="dropshipStoreCampService"
+              class="asia.leadsgen.psp.service_fulfill.DropShipStoreCampService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="dropshipOrderService"
+              class="asia.leadsgen.psp.service_fulfill.DropshipOrderService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="fulfillmentService"
+              class="asia.leadsgen.psp.service_fulfill.FulfillmentService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="dropshipOrderRefundService"
+              class="asia.leadsgen.psp.service_fulfill.DropshipOrderRefundService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="emailCampaignsService"
+              class="asia.leadsgen.psp.service.EmailCampaignsService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+	
+	<bean id="payoutWithdrawHandler"
+              class="asia.leadsgen.psp.server.handler.payout.PayoutWithdrawHandler">
+        <property name="passwordAES" value="${tracking.aes.password}" />
+    </bean>
+    
+	<bean id="payoutConfirmHandler"
+              class="asia.leadsgen.psp.server.handler.payout.PayoutConfirmHandler">
+        <property name="passwordAES" value="${tracking.aes.password}" />
+    </bean>
+    
+    <bean id="mailUtil" 
+    		  class="asia.leadsgen.psp.email.MailUtil">
+        <property name="url" value="${server.api.url}" />
+        <property name="passwordAES" value="${tracking.aes.password}" />
+        <property name="emailTrackingUrl" value="${emailTrackingUrl}" />
+    </bean>  
+   
+    <bean id="dropshipChargeOrderThread"
+              class="asia.leadsgen.psp.thread.DropshipChargeOrderThread">
+        <property name="aspAPIBaseURL"
+                          value="${asp.service.base.url}" />
+        <property name="paspAPIBaseURL"
+                          value="${payment.connector.service.base.url}" />
+                          
+        <property name="invoicerName" value="${payment.paypal.invoicer.name}" />
+        <property name="invoicerEmail" value="${payment.paypal.invoicer.email}" />
+        <property name="invoicerWebsite" value="${payment.paypal.invoicer.website}" />
+        <property name="invoicerTaxId" value="${payment.paypal.invoicer.tax.id}" />
+        <property name="invoicerLogoUrl" value="${payment.paypal.invoicer.logo.url}" />               
+    </bean>
+    
+    <bean id="shopbaseChargeOrderThread"
+              class="asia.leadsgen.psp.thread.ShopbaseChargeOrderThread">
+        <property name="aspAPIBaseURL"
+                          value="${asp.service.base.url}" />
+        <property name="paspAPIBaseURL"
+                          value="${payment.connector.service.base.url}" />
+    </bean>
+    
+    <bean id="sspApiConnector"
+              class="asia.leadsgen.psp.external.api.SSPApiConnector">
+        <property name="sspAPIPrefix" value="${ssp.service.base.url}" />
+    </bean>
+    
+    <bean id="ispApiConnector"
+              class="asia.leadsgen.psp.external.api.ISPApiConnector">
+        <property name="ispAPIPrefix" value="${isp.service.base.url}" />
+    </bean>
+    
+    <bean id="partnerPayoutService" class="asia.leadsgen.psp.service.PartnerPayoutService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="serverService"
+              class="asia.leadsgen.psp.service.ServerService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="masterService" 
+    		  class="asia.leadsgen.psp.service.MasterService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+
+	<bean id="googleServiceConfig"
+			  class="asia.leadsgen.psp.util.HttpServiceConfig">
+	   <property name="serviceName" value="${recaptcha.service.name}" />
+	   <property name="serviceRegion" value="${recaptcha.service.region}" />
+	   <property name="serviceURL" value="${recaptcha.service.endpoint}" />
+	   <property name="serviceTimeOut" value="${recaptcha.service.request.timeout}" />
+	</bean>
+	
+	<bean id="partnerConst" 
+			  class="asia.leadsgen.psp.util.PartnerConst">
+    </bean>
+
+	<bean id="shopifyAppService" 
+			  class="asia.leadsgen.psp.service_fulfill.ShopifyAppService">
+    	<property name="dataSource" ref="pspDataSource" />
+	</bean>
+
+	<bean id="orderProductUpdateFulfillmentReviewHandler"
+			  class="asia.leadsgen.psp.server.handler.fulfillment.OrderProductUpdateFulfillmentReviewHandler">
+		<property name="baseType" value="${psp.base_type.config.not.use.adjust.design}"/>
+		<property name="dataSource" ref="pspDataSource" />
+	</bean>
+	        
+	<bean id="campaignCreateServiceV2" 
+			  class="asia.leadsgen.psp.service_fulfill.CampaignCreateServiceV2">
+    	<property name="dataSource" ref="pspDataSource" />
+    </bean>
+         
+    <bean id="exchangeRateService"
+              class="asia.leadsgen.psp.service_fulfill.ExchangeRateService">
+        <property name="dataSource" ref="pspDataSource" />
+        <property name="fixerKey" value="${fixer_api_key}" />      
+	</bean>
+      
+    <bean id="shopifyAppConnectAuthHandler"
+              class="asia.leadsgen.psp.server.handler.shopify_app.ShopifyAppConnectAuthHandler">
+        <property name="secretKey" value="${shopify.app.secret.key}" />      
+        <property name="url" value="${shopify.app.api.base.url}" />
+    </bean>
+    
+    <bean id="uploadFileService" 
+    		  class="asia.leadsgen.psp.service_fulfill.UploadFileService">
+        <property name="dataSource" ref="pspDataSource" />
+    </bean>
+    
+    <bean id="dropshipTopupExecuteHandler"
+              class="asia.leadsgen.psp.server.handler.dropship.payment.DropshipTopupExecuteHandler">
+        <property name="paymentConnectorServiceConfig"
+                          ref="paymentConnectorServiceConfig" />
+        <property name="aspConnectorServiceConfig"
+                          ref="aspServiceConfig" />
+        <property name="paspAPIBaseURL" value="${payment.connector.service.base.url}" />
+         <property name="invoicerName" value="${payment.paypal.invoicer.name}" />
+        <property name="invoicerEmail" value="${payment.paypal.invoicer.email}" />
+        <property name="invoicerWebsite" value="${payment.paypal.invoicer.website}" />
+        <property name="invoicerTaxId" value="${payment.paypal.invoicer.tax.id}" />
+        <property name="invoicerLogoUrl" value="${payment.paypal.invoicer.logo.url}" />                     
+    	<property name="adminEmail" value="${notify.admin.email.address}" />
+    </bean>
+    
+	<bean id="mediaService"
+			  class="asia.leadsgen.psp.service_fulfill.MediaService">
+    	<property name="dataSource" ref="pspDataSource" />
+	</bean>
+	
+<!-- 	<bean id="storeOptionService"  -->
+<!-- 			  class="asia.leadsgen.psp.service_fulfill.StoreOptionService"> -->
+<!--     	<property name="dataSource" ref="pspDataSource" /> -->
+<!-- 	</bean> -->
+
+    <bean id="etsyService"  class="asia.leadsgen.psp.service_fulfill.EtsyService">
+        <property name="consumerKey" value="${etsy.consumer.key}"/>
+        <property name="consumerSecret" value="${etsy.consumer.secret}"/>
+        <property name="redirectUrlPrefix" value="${etsy.redirect.url.prefix}"/>
+    </bean>
+    
+    <bean id="getShippingConfigHandler"
+              class="asia.leadsgen.psp.server.handler.fulfillment.GetShippingConfigHandler">
+        <property name="shippingConfig" value="${shipping.config}" />
+    </bean>
+    
+    <bean id="productVariantMockupService" 
+			  class="asia.leadsgen.psp.service_fulfill.ProductVariantMockupService">
+    	<property name="dataSource" ref="pspDataSource" />
+	</bean>
+	
+	<bean id="dropshipStoreReconnectHanlder"
+              class="asia.leadsgen.psp.server.handler.dropship.store.DropshipStoreReconnectHanlder">
+        <property name="shopifyApiKey" value="${shopify.api.key}" />
+        <property name="shopifyRedirectUrl"
+                          value="${shopify.redirect.url.connect.store}" />
+        <property name="shopifyScope" value="${shopify.app.scope}" />
+        <property name="wooAppName" value="${dropship.store.reconnect.woo.app_name}" />
+        <property name="wooReturnUrl" value="${dropship.store.reconnect.woo.return_url}" />
+        <property name="wooCallBackUrl" value="${dropship.store.reconnect.woo.callback_url}" />
+        <property name="etsyConsumerKey" value="${etsy.consumer.key}"/>
+        <property name="etsyConsumerSecret" value="${etsy.consumer.secret}"/>
+        <property name="etsyRedirectUrl" value="${etsy.redirect.url.prefix}"/>
+    </bean>
+    
+    <bean id="wareHouseCreateHandler"
+              class="asia.leadsgen.psp.server.handler.warehouse.WareHouseCreateHandler">
+        <property name="domain" value="${partner.rosalinda.get.status.api.domain}" />
+        <property name="apiPrefix"
+                          value="${server.api.uri.prefix}" />
+    </bean>
+    
+    <bean id="updateTrackingService" class="asia.leadsgen.psp.service_fulfill.UpdateTrackingService">
+    	<property name="domain" value="${partner.rosalinda.get.status.api.domain}" />
+     	<property name="dataSource" ref="pspDataSource" />
+	</bean>
+	
+	<bean id="amazonS3Service" 
+    	class="asia.leadsgen.psp.service.AmazonS3Service" >
+    	<property name="awsAccessKeyId" value="${aws.s3.accessKeyId}" />
+		<property name="awsSecretKeyId" value="${aws.s3.secretKeyId}" />
+		<property name="awsRegion" value="${aws.s3.region}" />
+		<property name="awsCdn" value="${aws.s3.cdn}" />
+		<property name="awsBucket" value="${aws.s3.bucket}" />
+    </bean>
+    
+    <bean id= "campaignExportProductHandler"
+    	class="asia.leadsgen.psp.server.handler.dropship.product.CampaignExportProductHandler">
+    	<property name="path" value="${campaign.export.product.dir}" />
+    	<property name="s3PathPrefix" value="${campaign.export.product.aws-prefix}" />
+    </bean>
+    
+    <bean id= "shopifyCampaignCreateV2Handler"
+    	class="asia.leadsgen.psp.server.handler.shopify_app.ShopifyCampaignCreateV2Handler">
+    	<property name="ispPrefixTshirt" value="${shopify.isp.prefix.api.tshirt}" />
+    	<property name="ispPrefixOtherBase" value="${shopify.isp.prefix.api.otherbase}" />
+    </bean>
+    
+    <bean id= "shopifyCreateVariantHelper"
+    	class="asia.leadsgen.psp.server.handler.shopify_app.ShopifyCreateVariantHelper">
+    	<property name="ispPrefixTshirt" value="${shopify.isp.prefix.api.tshirt}" />
+    	<property name="ispPrefixOtherBase" value="${shopify.isp.prefix.api.otherbase}" />
+    </bean>
+	
+</beans>

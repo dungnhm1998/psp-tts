@@ -1,0 +1,125 @@
+{
+    "settings": {
+      "number_of_shards": 6,
+      "number_of_replicas": 2
+    },
+    "mappings": {
+      "properties": {
+        "entity": {
+          "properties": {
+            "back_view": {
+              "type": "boolean"
+            },
+            "base_group_id": {
+              "type": "keyword"
+            },
+            "categories": {
+              "type": "text"
+            },
+            "created_date": {
+              "type": "date"
+            },
+            "desc": {
+              "type": "text"
+            },
+            "design_back_url": {
+              "type": "keyword",
+              "index": false
+            },
+            "design_front_url": {
+              "type": "keyword",
+              "index": false
+            },
+            "domain": {
+              "type": "keyword"
+            },
+            "domain_id": {
+              "type": "keyword"
+            },
+            "end_time": {
+              "type": "date"
+            },
+            "fb_pixel": {
+              "type": "keyword",
+              "index": false
+            },
+            "gg_pixel": {
+              "type": "keyword",
+              "index": false
+            },
+            "id": {
+              "type": "keyword"
+            },
+            "price": {
+              "type": "scaled_float",
+               "scaling_factor": 100
+            },
+            "private": {
+              "type": "boolean"
+            },
+            "relaunch": {
+              "type": "boolean"
+            },
+            "row_update_time": {
+              "type": "long"
+            },
+            "seo_desc": {
+              "type": "text"
+            },
+            "seo_image_cover": {
+              "type": "text",
+              "index": false
+            },
+            "seo_title": {
+              "type": "text",
+              "index": false
+            },
+            "start_time": {
+              "type": "date"
+            },
+            "state": {
+              "type": "keyword"
+            },
+            "tags": {
+              "type": "text"
+            },
+            "title": {
+              "type": "text"
+            },
+            "url": {
+              "type": "keyword"
+            },
+            "user_id": {
+              "type": "keyword"
+            }
+          }
+        },
+        "full_text": {
+          "type": "text"
+        },
+        "keyword_facets": {
+          "type": "nested",
+          "properties": {
+            "facet_name": {
+              "type": "keyword"
+            },
+            "facet_value": {
+              "type": "keyword"
+            }
+          }
+        },
+        "scaled_float_facets": {
+          "type": "nested",
+          "properties": {
+            "facet_name": {
+              "type": "keyword"
+            },
+            "facet_value": {
+              "type": "scaled_float",
+              "scaling_factor": 100
+            }
+          }
+        }
+      }
+    }
+  }
