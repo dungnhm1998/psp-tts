@@ -31,9 +31,9 @@ import oracle.jdbc.OracleTypes;
 
 public class DropshipOrderProductService extends MasterService {
 
-	static final String DROPSHIP_ORDER_PRODUCT_INSERT = "{call PKG_FF_DROPSHIP_ORDER_PRODUCT.dropship_order_product_insert(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)}";
-	static final String DROPSHIP_ORDER_PRD_UPDATE = "{call PKG_FF_DROPSHIP_ORDER_PRODUCT.order_prd_update(?,?,?,?,?,?,?,?,?,?,?,?,?)}";
-	static final String DROPSHIP_ORDER_PRD_UPDATE_BY_PREDEFINED_SKU = "{call PKG_FF_DROPSHIP_ORDER_PRODUCT.order_prd_update_by_predefined_sku(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)}";
+	static final String DROPSHIP_ORDER_PRODUCT_INSERT = "{call PKG_FF_DROPSHIP_ORDER_PRODUCT.dropship_order_product_insert(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)}";
+	static final String DROPSHIP_ORDER_PRD_UPDATE = "{call PKG_FF_DROPSHIP_ORDER_PRODUCT.order_prd_update(?,?,?,?,?,?,?,?,?,?,?,?,?,?)}";
+	static final String DROPSHIP_ORDER_PRD_UPDATE_BY_PREDEFINED_SKU = "{call PKG_FF_DROPSHIP_ORDER_PRODUCT.order_prd_update_by_predefined_sku(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)}";
 	static final String DROPSHIP_ORDER_PRD_SEARCH = "{call PKG_FF_DROPSHIP_ORDER_PRODUCT.order_prd_search(?,?,?,?,?,?)}";
 	static final String DROPSHIP_ORDER_PRD_DELETE_ALL = "{call PKG_FF_DROPSHIP_ORDER_PRODUCT.order_prd_delete_all(?,?,?)}";
 	static final String DROPSHIP_ORDER_PRD_DELETE_ALL_CSV_IMPORT = "{call PKG_FF_DROPSHIP_ORDER_PRODUCT.order_prd_csv_delete_all_by_order_id(?,?,?)}";
@@ -85,16 +85,17 @@ public class DropshipOrderProductService extends MasterService {
 		inputParams.put(31, dropshipOrderProduct.getUnitAmount());
 		inputParams.put(32, dropshipOrderProduct.getTax());
 		inputParams.put(33, dropshipOrderProduct.getTaxAmount());
+		inputParams.put(34, dropshipOrderProduct.getTaxRate());
 
 		Map<Integer, Integer> outputParamsTypes = new LinkedHashMap<>();
-		outputParamsTypes.put(34, OracleTypes.NUMBER);
-		outputParamsTypes.put(35, OracleTypes.VARCHAR);
-		outputParamsTypes.put(36, OracleTypes.CURSOR);
+		outputParamsTypes.put(35, OracleTypes.NUMBER);
+		outputParamsTypes.put(36, OracleTypes.VARCHAR);
+		outputParamsTypes.put(37, OracleTypes.CURSOR);
 
 		Map<Integer, String> outputParamsNames = new LinkedHashMap<>();
-		outputParamsNames.put(34, AppParams.RESULT_CODE);
-		outputParamsNames.put(35, AppParams.RESULT_MSG);
-		outputParamsNames.put(36, AppParams.RESULT_DATA);
+		outputParamsNames.put(35, AppParams.RESULT_CODE);
+		outputParamsNames.put(36, AppParams.RESULT_MSG);
+		outputParamsNames.put(37, AppParams.RESULT_DATA);
 
 		Map insertResultMap = DBProcedureUtil.execute(dataSource, DROPSHIP_ORDER_PRODUCT_INSERT, inputParams, outputParamsTypes, outputParamsNames);
 
@@ -133,16 +134,17 @@ public class DropshipOrderProductService extends MasterService {
 		inputParams.put(8, obj.getBaseCost());
 		inputParams.put(9, obj.getUnitAmount());
 		inputParams.put(10, obj.getTaxAmount());
+		inputParams.put(11, obj.getTaxRate());
 
 		Map<Integer, Integer> outputParamsTypes = new LinkedHashMap<>();
-		outputParamsTypes.put(11, OracleTypes.NUMBER);
-		outputParamsTypes.put(12, OracleTypes.VARCHAR);
-		outputParamsTypes.put(13, OracleTypes.CURSOR);
+		outputParamsTypes.put(12, OracleTypes.NUMBER);
+		outputParamsTypes.put(13, OracleTypes.VARCHAR);
+		outputParamsTypes.put(14, OracleTypes.CURSOR);
 
 		Map<Integer, String> outputParamsNames = new LinkedHashMap<>();
-		outputParamsNames.put(11, AppParams.RESULT_CODE);
-		outputParamsNames.put(12, AppParams.RESULT_MSG);
-		outputParamsNames.put(13, AppParams.RESULT_DATA);
+		outputParamsNames.put(12, AppParams.RESULT_CODE);
+		outputParamsNames.put(13, AppParams.RESULT_MSG);
+		outputParamsNames.put(14, AppParams.RESULT_DATA);
 
 		Map insertResultMap = DBProcedureUtil.execute(dataSource, DROPSHIP_ORDER_PRD_UPDATE,
 				inputParams, outputParamsTypes, outputParamsNames);
@@ -194,16 +196,17 @@ public class DropshipOrderProductService extends MasterService {
 			inputParams.put(20, dropshipOrderProduct.getVariantId());
 			inputParams.put(21, dropshipOrderProduct.getUnitAmount());
 			inputParams.put(22, dropshipOrderProduct.getTaxAmount());
+			inputParams.put(23, dropshipOrderProduct.getTaxRate());
 			LOGGER.info("=>Dropship Order product update result: 1");
 			Map<Integer, Integer> outputParamsTypes = new LinkedHashMap<>();
-			outputParamsTypes.put(23, OracleTypes.NUMBER);
-			outputParamsTypes.put(24, OracleTypes.VARCHAR);
-			outputParamsTypes.put(25, OracleTypes.CURSOR);
+			outputParamsTypes.put(24, OracleTypes.NUMBER);
+			outputParamsTypes.put(25, OracleTypes.VARCHAR);
+			outputParamsTypes.put(26, OracleTypes.CURSOR);
 			LOGGER.info("=>Dropship Order product update result: 2");
 			Map<Integer, String> outputParamsNames = new LinkedHashMap<>();
-			outputParamsNames.put(23, AppParams.RESULT_CODE);
-			outputParamsNames.put(24, AppParams.RESULT_MSG);
-			outputParamsNames.put(25, AppParams.RESULT_DATA);
+			outputParamsNames.put(24, AppParams.RESULT_CODE);
+			outputParamsNames.put(25, AppParams.RESULT_MSG);
+			outputParamsNames.put(26, AppParams.RESULT_DATA);
 			LOGGER.info("=>Dropship Order product update result: 3");
 
 

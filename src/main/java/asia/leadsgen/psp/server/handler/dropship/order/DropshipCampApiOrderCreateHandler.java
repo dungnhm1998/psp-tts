@@ -298,14 +298,15 @@ public class DropshipCampApiOrderCreateHandler extends PSPOrderHandler implement
 			double productSubTotal = itemMapper.getBaseCost() * item.getQuantity();
 			double productTotal = GetterUtil.format(productSubTotal + shippingFee, 2);
 			LOGGER.info("+++productAmount = " + productTotal);
-
+			Double taxRate =0d;
 			Double taxAmount =0d;
 			if (StringUtils.isEmpty(orderRequest.getIossNumber())) {
 				taxAmount = OrderUtil.getTaxByAmountAndByCountry(productTotal, countryTax);
+				taxRate=OrderUtil.getTaxRateFromCountryTax(countryTax);
 			}
 
 			productTotal = GetterUtil.format(productTotal + taxAmount, 2);
-			LOGGER.info("+++taxAmount = " + taxAmount);
+			LOGGER.info("+++taxAmount = " + taxAmount + ", taxRate = " + taxRate);
 
 			LOGGER.info("api create savedOrderId=" + savedOrderId);
 			DropshipOrderProductTypeObj dropshipOrderProduct = DropshipOrderProductTypeObj.builder()
@@ -332,6 +333,7 @@ public class DropshipCampApiOrderCreateHandler extends PSPOrderHandler implement
 					.shippingFee(String.valueOf(shippingFee))
 					.shippingMethod(AppParams.STANDARD)
 					.taxAmount(String.valueOf(taxAmount))
+					.taxRate(String.valueOf(taxRate))
 					.build();
 
 			DropshipOrderProductService.insertDropshipOrderProductV2(dropshipOrderProduct);

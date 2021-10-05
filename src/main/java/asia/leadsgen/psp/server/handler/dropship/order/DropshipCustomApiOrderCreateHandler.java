@@ -460,11 +460,14 @@ public class DropshipCustomApiOrderCreateHandler extends PSPOrderHandler impleme
 			double productTotal = GetterUtil.format(productSubTotal + shippingFee, 2);
 			LOGGER.info("+++productTotal = " + productTotal);
 			Double taxAmount =0d;
+			Double taxRate=0d;
 			if (StringUtils.isEmpty(orderRequest.getIossNumber())) {
 				taxAmount = OrderUtil.getTaxByAmountAndByCountry(productTotal, countryTax);
+				taxRate=OrderUtil.getTaxRateFromCountryTax(countryTax);
+				
 			}
 			productTotal = GetterUtil.format(productTotal + taxAmount, 2);
-			LOGGER.info("+++taxAmount = " + taxAmount);
+			LOGGER.info("+++taxAmount = " + taxAmount + ", taxRate = " + taxRate);
 
 			DropshipOrderProductTypeObj dropshipOrderProduct = DropshipOrderProductTypeObj.builder()
 					.orderId(savedOrderId)
@@ -495,6 +498,7 @@ public class DropshipCustomApiOrderCreateHandler extends PSPOrderHandler impleme
 //					.partnerProperties(partnerProperties.toString())
 //					.partnerOption(partnerOption.toString())
 					.taxAmount(String.valueOf(taxAmount))
+					.taxRate(String.valueOf(taxRate))
 					.build();
 
 			DropshipOrderProductService.insertDropshipOrderProductV2(dropshipOrderProduct);

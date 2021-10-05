@@ -932,9 +932,10 @@ public class ShopifyFetchOrder extends PSPOrderHandler {
 			double productSubTotal = baseCost * quantity;
 			double productAmount = GetterUtil.format(productSubTotal + shippingFee, 2);
 			LOGGER.info("+++productAmount = " + productAmount);
+			Double taxRate=OrderUtil.getTaxRateFromCountryTax(countryTax);
 			Double taxAmount = OrderUtil.getTaxByAmountAndByCountry(productAmount,countryTax);
 			productAmount = GetterUtil.format(productAmount + taxAmount, 2);
-			LOGGER.info("+++taxAmount = " + taxAmount);
+			LOGGER.info("+++taxAmount = " + taxAmount + ", taxRate = " + taxRate);
 
 			DropshipOrderProductTypeObj orderProductObj = DropshipOrderProductTypeObj.builder()
 					.orderId(orderId)
@@ -967,6 +968,7 @@ public class ShopifyFetchOrder extends PSPOrderHandler {
 					.designFrontUrl(designFrontUrl)
 					.designBackUrl(designBackUrl)
 					.taxAmount(String.valueOf(taxAmount))
+					.taxRate(String.valueOf(taxRate))
 					.build();
 
 			orderItem = DropshipOrderProductService.insertDropshipOrderProductV2(orderProductObj);
