@@ -813,6 +813,7 @@ public class ShopifySyncOrdersHandler extends PSPOrderHandler implements Handler
 		
 		int quantity = vObj.getInt("quantity");
 		Double shippingFee = 0.00d;
+		Double taxRate=0d;
 		Double taxAmount = 0.00d;
 		double productSubTotal = 0;
 		double productAmount = 0;
@@ -859,9 +860,10 @@ public class ShopifySyncOrdersHandler extends PSPOrderHandler implements Handler
 
 			productAmount = GetterUtil.format(baseCost * quantity + shippingFee, 2);
 			LOGGER.info("+++productAmount = " + productAmount);
+			taxRate=OrderUtil.getTaxRateFromCountryTax(countryTax);
 			taxAmount = OrderUtil.getTaxByAmountAndByCountry(productAmount,countryTax);
 			productAmount = GetterUtil.format(productAmount + taxAmount, 2);
-			LOGGER.info("+++taxAmount = " + taxAmount);
+			LOGGER.info("+++taxAmount = " + taxAmount + ", taxRate = " + taxRate);
 			
 		} else {
 			
@@ -945,6 +947,7 @@ public class ShopifySyncOrdersHandler extends PSPOrderHandler implements Handler
 				.partnerOption(partnerOption.toString())
 //				.baseShortCode(baseShortCode)
 				.taxAmount(String.valueOf(taxAmount))
+				.taxRate(String.valueOf(taxRate))
 				.build();
 
 		LOGGER.info("orderProductObj: " + orderProductObj.toString());

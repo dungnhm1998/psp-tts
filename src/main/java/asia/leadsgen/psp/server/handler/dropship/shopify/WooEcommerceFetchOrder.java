@@ -692,9 +692,10 @@ public class WooEcommerceFetchOrder extends PSPOrderHandler {
 			double productSubTotal = baseCost * quantity;
 			double productAmount = GetterUtil.format(baseCost * quantity + shippingFee, 2);
 			LOGGER.info("+++productAmount = " + productAmount);
+			Double taxRate=OrderUtil.getTaxRateFromCountryTax(countryTax);
 			Double taxAmount = OrderUtil.getTaxByAmountAndByCountry(productAmount,countryTax);
 			productAmount = GetterUtil.format(productAmount + taxAmount, 2);
-			LOGGER.info("+++taxAmount = " + taxAmount);
+			LOGGER.info("+++taxAmount = " + taxAmount + ", taxRate = " + taxRate);
 
 			DropshipOrderProductTypeObj orderProductObj = DropshipOrderProductTypeObj.builder()
 					.orderId(orderId)
@@ -727,6 +728,7 @@ public class WooEcommerceFetchOrder extends PSPOrderHandler {
 					.designFrontUrl(designFrontUrl)
 					.designBackUrl(designBackUrl)
 					.taxAmount(String.valueOf(taxAmount))
+					.taxRate(String.valueOf(taxRate))
 					.build();
 
 			orderItem = DropshipOrderProductService.insertDropshipOrderProductV2(orderProductObj);
@@ -746,6 +748,7 @@ public class WooEcommerceFetchOrder extends PSPOrderHandler {
 
 		int quantity = vObj.getInt("quantity");
 		Double shippingFee = 0.00d;
+		Double taxRate = 0.00d;
 		Double taxAmount = 0.00d;
 		double baseCost = 0d;
 		double productSubTotal = 0;
@@ -798,6 +801,7 @@ public class WooEcommerceFetchOrder extends PSPOrderHandler {
 		orderProductObj.setPartnerProperties(partnerProperties.toString());
 		orderProductObj.setShippingMethod(AppParams.STANDARD);
 		orderProductObj.setTaxAmount(String.valueOf(taxAmount));
+		orderProductObj.setTaxRate(String.valueOf(taxRate));
 
 		LOGGER.info("orderProductObj: " + orderProductObj.toString());
 		Map orderItem = DropshipOrderProductService.insertDropshipOrderProductV2(orderProductObj);

@@ -303,11 +303,13 @@ public class DropshipOrderCreateV2Handler extends PSPOrderHandler implements Han
 		double productAmount = GetterUtil.format(baseCost * quantity + shippingFee, 2);
 		LOGGER.info("+++productAmount = " + productAmount);
 		Double taxAmount =0d;
+		Double taxRate=0.0;
 		if (StringUtils.isEmpty(iossNumber)) {
+			taxRate=OrderUtil.getTaxRateFromCountryTax(countryTax);
 			taxAmount = OrderUtil.getTaxByAmountAndByCountry(productAmount, countryTax);
 		}
 		productAmount = GetterUtil.format(productAmount + taxAmount, 2);
-		LOGGER.info("+++taxAmount = " + taxAmount);
+		LOGGER.info("+++taxAmount = " + taxAmount + ", taxRate = " + taxRate);
 
 		DropshipOrderProductTypeObj orderProductObj = DropshipOrderProductTypeObj.builder()
 				.orderId(orderId)
@@ -342,6 +344,7 @@ public class DropshipOrderCreateV2Handler extends PSPOrderHandler implements Han
 //				.partnerOption(setPartnerOption)
 				.unitAmount(unitAmount)
 				.taxAmount(String.valueOf(taxAmount))
+				.taxRate(String.valueOf(taxRate))
 				.build();
 
 		LOGGER.info("orderProductObj: " + orderProductObj.toString());

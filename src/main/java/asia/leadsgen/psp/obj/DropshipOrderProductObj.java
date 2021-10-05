@@ -43,8 +43,9 @@ public class DropshipOrderProductObj {
 	private String unitAmount;
 	private String tax;
 	private double taxAmount;
+	private double taxRate;
 
-	public DropshipOrderProductObj(String orderId, String campaignId, String productId, String variantId, String sizeId, double price, double shippingFee, String currency, int quantity, String state, String variantName, double amount, double baseCost, String baseId, String lineItemId, String variantFrontUrl, String variantBackUrl, String colorId, String colorValue, String partnerSku, String colorName, String sizeName, String shippingMethod, String printDetail, String itemType, String partnerProperties, String partnerOption, String baseShortCode, String designFrontUrl, String designBackUrl, String unitAmount, String tax, double taxAmount) {
+	public DropshipOrderProductObj(String orderId, String campaignId, String productId, String variantId, String sizeId, double price, double shippingFee, String currency, int quantity, String state, String variantName, double amount, double baseCost, String baseId, String lineItemId, String variantFrontUrl, String variantBackUrl, String colorId, String colorValue, String partnerSku, String colorName, String sizeName, String shippingMethod, String printDetail, String itemType, String partnerProperties, String partnerOption, String baseShortCode, String designFrontUrl, String designBackUrl, String unitAmount, String tax, double taxAmount, double taxRate) {
 		this.orderId = orderId;
 		this.campaignId = campaignId;
 		this.productId = productId;
@@ -78,6 +79,7 @@ public class DropshipOrderProductObj {
 		this.unitAmount = unitAmount;
 		this.tax = tax;
 		this.taxAmount = taxAmount;
+		this.taxRate = taxRate;
 	}
 
 	public static class Builder {
@@ -114,6 +116,7 @@ public class DropshipOrderProductObj {
 		private String unitAmount;
 		private String tax;
 		private double taxAmount;
+		private double taxRate;
 		
 		public Builder() {
 			
@@ -287,10 +290,14 @@ public class DropshipOrderProductObj {
 			this.taxAmount = taxAmount;
 			return this;
 		}
+		public DropshipOrderProductObj.Builder taxRate(double taxRate) {
+			this.taxRate = taxRate;
+			return this;
+		}
 
 		public DropshipOrderProductObj build() {
 			return new DropshipOrderProductObj(
-					this.orderId, this.campaignId, this.productId, this.variantId, this.sizeId, this.price, this.shippingFee, this.currency, this.quantity, this.state, this.variantName, this.amount, this.baseCost, this.baseId, this.lineItemId, this.variantFrontUrl, this.variantBackUrl, this.colorId, this.colorValue, this.partnerSku, this.colorName, this.sizeName, this.shippingMethod, this.printDetail, this.itemType, this.partnerProperties, this.partnerOption, this.baseShortCode, this.designFrontUrl, this.designBackUrl, this.unitAmount, this.tax, this.taxAmount);
+					this.orderId, this.campaignId, this.productId, this.variantId, this.sizeId, this.price, this.shippingFee, this.currency, this.quantity, this.state, this.variantName, this.amount, this.baseCost, this.baseId, this.lineItemId, this.variantFrontUrl, this.variantBackUrl, this.colorId, this.colorValue, this.partnerSku, this.colorName, this.sizeName, this.shippingMethod, this.printDetail, this.itemType, this.partnerProperties, this.partnerOption, this.baseShortCode, this.designFrontUrl, this.designBackUrl, this.unitAmount, this.tax, this.taxAmount, this.taxRate);
 		}
 
 	}
@@ -332,6 +339,7 @@ public class DropshipOrderProductObj {
 				+ ", unitAmount=" + unitAmount
 				+ ", tax=" + tax
 				+ ", taxAmount=" + taxAmount
+				+ ", taxRate=" + taxRate
 				+ "]";
 	}
 }

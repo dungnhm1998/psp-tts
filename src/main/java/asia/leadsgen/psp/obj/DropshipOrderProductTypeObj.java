@@ -61,6 +61,7 @@ public class DropshipOrderProductTypeObj implements SQLData {
 	private Clob partnerOptionClob;
 	private Clob printDetailClob;
 	private Clob customDataClob;
+	private String taxRate;
 
 	public static final String SQL_TYPE = "ORDER_PRODUCT_TYPE";
 
@@ -107,6 +108,7 @@ public class DropshipOrderProductTypeObj implements SQLData {
 		partnerOption = stream.readString();
 		taxAmount = stream.readString();
 		customData = stream.readString();
+		taxRate = stream.readString();
 	}
 
 	@Override
@@ -147,6 +149,7 @@ public class DropshipOrderProductTypeObj implements SQLData {
 		stream.writeClob(partnerOptionClob);
 		stream.writeString(taxAmount);
 		stream.writeClob(customDataClob);
+		stream.writeString(taxRate);
 
 	}
 }
