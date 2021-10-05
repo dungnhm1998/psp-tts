@@ -13,13 +13,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import asia.leadsgen.psp.error.SystemError;
+import asia.leadsgen.psp.exception.BadRequestException;
 import asia.leadsgen.psp.obj.Address;
 import asia.leadsgen.psp.obj.DropshipCampApiOrder;
 import asia.leadsgen.psp.obj.DropshipCustomApiItem;
 import asia.leadsgen.psp.obj.DropshipOrderObj;
 import asia.leadsgen.psp.obj.DropshipOrderProductObj;
+import asia.leadsgen.psp.obj.DropshipOrderProductTypeObj;
+import asia.leadsgen.psp.obj.DropshipOrderTypeObj;
 import asia.leadsgen.psp.obj.DropshipStoreObj;
 import asia.leadsgen.psp.obj.ShippingFeeObj;
+import asia.leadsgen.psp.service_fulfill.DropshipOrderServiceV2;
 import asia.leadsgen.psp.util.OrderUtil;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
@@ -55,9 +60,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * 
  * @author liamle
- *
  */
 public class DropshipCampApiOrderCreateHandler extends PSPOrderHandler implements Handler<RoutingContext> {
 
@@ -95,7 +98,10 @@ public class DropshipCampApiOrderCreateHandler extends PSPOrderHandler implement
 				String orderMiddle = "";
 				if (response.getSuccess() && CollectionUtils.isEmpty(order.getItems())) {
 					response = new Response(false, "Order items can not be empty.", 400);
+				} else if (!OrderUtil.checkValidIossNumber(order.getIossNumber())) {
+					response = new Response(false, "Invalid IOSS number", 400);
 				} else if (response.getSuccess()) {
+
 					orderItemVariantMapper = new HashMap<>();
 					for (int i = 0; i < order.getItems().size(); i++) {
 						DropshipCustomApiItem orderItem = order.getItems().get(i);
@@ -111,6 +117,7 @@ public class DropshipCampApiOrderCreateHandler extends PSPOrderHandler implement
 								break;
 							}
 						}
+
 						orderMiddle = orderItemVariantMapper.get(orderItem.getSku()).getCampaignId() + "-"
 								+ orderItemVariantMapper.get(orderItem.getSku()).getBaseShortCode();
 
@@ -131,6 +138,7 @@ public class DropshipCampApiOrderCreateHandler extends PSPOrderHandler implement
 					}
 
 				}
+
 				String orderId = null;
 				if (response.getSuccess() && order.getSandbox() == false) {
 					DropshipStoreObj store = DropShipStoreService.findByApiKey(order.getApiKey());
@@ -158,7 +166,7 @@ public class DropshipCampApiOrderCreateHandler extends PSPOrderHandler implement
 				}
 
 				String reasonPhase = response.getCode().intValue() == 200 ? HttpResponseStatus.OK.reasonPhrase()
-						: HttpResponseStatus.BAD_REQUEST.reasonPhrase();
+						:HttpResponseStatus.BAD_REQUEST.reasonPhrase();
 
 				routingContext.put(AppParams.RESPONSE_CODE, response.getCode());
 				routingContext.put(AppParams.RESPONSE_MSG, reasonPhase);
@@ -245,23 +253,25 @@ public class DropshipCampApiOrderCreateHandler extends PSPOrderHandler implement
 	}
 
 	private String createOrder(DropshipStoreObj store, String referenceOrderId, String shippingId, String orderPrefix,
-			DropshipCampApiOrder orderRequest) throws SQLException, ParseException {
+							   DropshipCampApiOrder orderRequest) throws SQLException, ParseException {
 
-		DropshipOrderObj dropshipOrder = new DropshipOrderObj.Builder(orderPrefix)
-				.orderCurrency("USD")
+		DropshipOrderTypeObj dropshipOrder = DropshipOrderTypeObj.builder()
+				.idPrefix(orderPrefix)
+				.currency("USD")
 				.state(ResourceStates.QUEUED)
 				.shippingId(shippingId)
-				.trackingNumber(AppUtil.generateOrderTrackingNumber())
+				.trackingCode(AppUtil.generateOrderTrackingNumber())
 				.note(orderRequest.getApiKey())
 				.channel("api")
 				.source(ResourceSource.CAMP_API)
 				.storeId(store.getId())
 				.userId(store.getUserId())
-				.referenceOrderId(referenceOrderId)
+				.referenceOrder(referenceOrderId)
 				.minifiedJson(new Gson().toJson(orderRequest))
+				.iossNumber(orderRequest.getIossNumber())
 				.build();
 
-		Map savedOrder = DropshipOrderService.insertDropshipOrder(dropshipOrder);
+		Map savedOrder = DropshipOrderServiceV2.insertDropshipOrderV2(dropshipOrder);
 		String savedOrderId = ParamUtil.getString(savedOrder, AppParams.ID);
 
 		initItemGroupQuantity();
@@ -278,21 +288,28 @@ public class DropshipCampApiOrderCreateHandler extends PSPOrderHandler implement
 		Map countryTax = CountryTaxService.getTaxByCountry(orderRequest.getShippingCountry());
 
 		Double totalTax = 0d;
-		
+
 		for (DropshipCustomApiItem item : orderRequest.getItems()) {
 
 			ItemMapper itemMapper = orderItemVariantMapper.get(item.getSku());
 			Map feeMap = ProductUtil.calculateDropshipShippingFeeAndTaxV2(itemGroupQuantity, itemMapper.getBaseId(), AppParams.STANDARD, item.getQuantity(), shippingInfo);
-			Double shippingFee = ParamUtil.getDouble(feeMap,  AppParams.SHIPPING_FEE);
+			Double shippingFee = ParamUtil.getDouble(feeMap, AppParams.SHIPPING_FEE);
 
 			double productSubTotal = itemMapper.getBaseCost() * item.getQuantity();
 			double productTotal = GetterUtil.format(productSubTotal + shippingFee, 2);
 			LOGGER.info("+++productAmount = " + productTotal);
-			Double taxAmount = OrderUtil.getTaxByAmountAndByCountry(productTotal,countryTax);
+
+			Double taxAmount =0d;
+			if (StringUtils.isEmpty(orderRequest.getIossNumber())) {
+				taxAmount = OrderUtil.getTaxByAmountAndByCountry(productTotal, countryTax);
+			}
+
 			productTotal = GetterUtil.format(productTotal + taxAmount, 2);
 			LOGGER.info("+++taxAmount = " + taxAmount);
 
-			DropshipOrderProductObj dropshipOrderProduct = new DropshipOrderProductObj.Builder(savedOrderId)
+			LOGGER.info("api create savedOrderId=" + savedOrderId);
+			DropshipOrderProductTypeObj dropshipOrderProduct = DropshipOrderProductTypeObj.builder()
+					.orderId(savedOrderId)
 					.quantity(item.getQuantity())
 					.campaignId(itemMapper.getCampaignId())
 					.productId(itemMapper.getProductId())
@@ -309,22 +326,22 @@ public class DropshipCampApiOrderCreateHandler extends PSPOrderHandler implement
 					.designFrontUrl(itemMapper.getDesignFrontUrl())
 					.designBackUrl(itemMapper.getDesignBackUrl())
 					.state(ResourceStates.APPROVED)
-					.price(itemMapper.getBaseCost())
-					.baseCost(itemMapper.getBaseCost())
-					.amount(productTotal)
-					.shippingFee(shippingFee)
+					.price(String.valueOf(itemMapper.getBaseCost()))
+					.baseCost(String.valueOf(itemMapper.getBaseCost()))
+					.amount(String.valueOf(productTotal))
+					.shippingFee(String.valueOf(shippingFee))
 					.shippingMethod(AppParams.STANDARD)
-					.taxAmount(taxAmount)
+					.taxAmount(String.valueOf(taxAmount))
 					.build();
 
-			DropshipOrderProductService.insertDropshipOrderProduct(dropshipOrderProduct);
-			
+			DropshipOrderProductService.insertDropshipOrderProductV2(dropshipOrderProduct);
+
 			orderTotal += productTotal;
 			orderSubTotal += productSubTotal;
 			orderShippingTotal += shippingFee;
 			totalItems += item.getQuantity();
 			totalTax += taxAmount;
-			
+
 		}
 
 		String addressCheckMessage = "";

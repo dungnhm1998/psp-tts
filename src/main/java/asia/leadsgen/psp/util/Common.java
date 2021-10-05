@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Properties;
 import java.util.Random;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -712,4 +713,10 @@ public class Common {
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
         'A', 'B', 'C', 'D', 'E', 'F'
     };
+
+    public static String getUUID(){
+        UUID uuid = UUID.randomUUID();
+        String uuidAsString = uuid.toString().replace("-", "");
+        return uuidAsString;
+    }
 }

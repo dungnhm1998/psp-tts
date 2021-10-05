@@ -19,6 +19,7 @@ public enum RedisKeyEnum {
 	BASE_GROUPS_MAP("redis.map.dropship.basegroups"),
 	BASE_GROUPS_MAP_ORDER("redis.map.dropship.basegroups.order"),
 	BASE_NEW_PRODUCT("redis.map.dropship.base.new"),
+	BASE_SIZE_MAP("redis.map.base.size"),
 	;
 	
 	private String value;

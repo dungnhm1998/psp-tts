@@ -22,6 +22,7 @@ import asia.leadsgen.psp.service_fulfill.DropshipBaseSkuService;
 
 public class OrderUtil implements LoggerInterface {
 
+
 	public static Set<String> getSetBaseFromItemCamp(List<Map> requestItems) throws SQLException {
 
 		Set<String> result = new HashSet<String>();
@@ -48,16 +49,16 @@ public class OrderUtil implements LoggerInterface {
 		}
 		return result;
 	}
-	
+
 	public static Set<String> getSetBaseIdFromJsonObj(JSONArray requestItems) throws SQLException {
-		
+
 		Set<String> result = new HashSet<String>();
 		int countItems = requestItems.length();
-		
+
 		for (int i = 0; i < countItems; i++) {
-			
+
 			JSONObject vObj = requestItems.getJSONObject(i);
-			
+
 			if (vObj.has("is_map") && vObj.get("is_map") instanceof Boolean) {
 				LOGGER.info("Has key is_map");
 				boolean is_map = vObj.getBoolean("is_map");
@@ -72,26 +73,26 @@ public class OrderUtil implements LoggerInterface {
 				String variantId = lineSku[0];
 				String sizeId = lineSku[1];
 				Map variantMap = ProductVariantService.getVariantMapByIdAndSizeId(variantId, sizeId);
-				
+
 				if (!variantMap.isEmpty()) {
 					String baseId = ParamUtil.getString(variantMap, AppParams.BASE_ID);
 					result.add(baseId);
 				}
 			}
 		}
-		
+
 		return result;
 	}
-	
+
 	public static Set<String> getSetBaseIdFromTransactions(List<Map> transactions) throws SQLException {
-		
+
 		Set<String> result = new HashSet<String>();
-		
+
 		for (Map singleTransactions : transactions) {
-			
+
 			Map productData = (Map) singleTransactions.get("product_data");
 			String sku = ParamUtil.getString(productData, AppParams.SKU);
-			
+
 			if (sku.startsWith("BG")) {
 				LOGGER.info("sku from transaction: " + sku);
 				String[] lineSku = sku.split("\\|");
@@ -99,17 +100,17 @@ public class OrderUtil implements LoggerInterface {
 				String sizeId = lineSku[1];
 
 				Map variantMap = ProductVariantService.getVariantMapByIdAndSizeId(variantId, sizeId);
-				
+
 				if (!variantMap.isEmpty()) {
 					String baseId = ParamUtil.getString(variantMap, AppParams.BASE_ID);
 					result.add(baseId);
 				}
 			}
 		}
-		
+
 		return result;
 	}
-	
+
 	private static final Logger LOGGER = Logger.getLogger(OrderUtil.class.getName());
 
 	public static Set<String> getSetBaseFromItemCampApi(List<DropshipCustomApiItem> items) throws SQLException {
@@ -138,47 +139,53 @@ public class OrderUtil implements LoggerInterface {
 
 		return result;
 	}
-	
-	@Deprecated
-	public static Double getTaxByCountry(Double orderAmount , String countryCode) throws SQLException {
-		
-		Double taxAmount = 0.00d;
-		
-		Map countryTax = CountryTaxService.getTaxByCountry(countryCode);
-		
+
+	public static Double getTaxRateFromCountryTax(Map countryTax) {
+		Double taxRate = 0.00d;
+
+		String countryCode = ParamUtil.getString(countryTax, AppParams.S_TAX_RATE);
+
 		if (MapUtils.isEmpty(countryTax)) {
-			logger.info("Country --" + countryCode + " has not been defined for taxes ");
-			return taxAmount;
+			logger.info("Country from countryTax is null");
 		} else {
+			Double tax = ParamUtil.getDouble(countryTax, AppParams.S_TAX, 0.00d);
 			String type = ParamUtil.getString(countryTax, AppParams.S_TYPE);
-			Double tax = ParamUtil.getDouble(countryTax, AppParams.S_TAX , 0.00d);
+
+			logger.info("Country from countryTax = " + countryCode + ", tax = " + tax + ", type = " + type);
+
 			if ("percent".equalsIgnoreCase(type)) {
-				taxAmount = orderAmount/100*tax;
-			} else if ("fix".equalsIgnoreCase(type)) {
-				taxAmount = tax;
+				taxRate = GetterUtil.format(tax / 100, 2);
 			}
+
+			countryTax.put(AppParams.S_TAX_RATE, taxRate);
 		}
-		
-		taxAmount = GetterUtil.format(taxAmount, 2);
-		return taxAmount;
+
+		return taxRate;
 	}
 
-	public static Double getTaxByAmountAndByCountry(Double orderAmount , Map countryTax) throws SQLException {
+	public static Double getTaxByAmountAndByCountry(Double orderAmount, Map countryTax) throws SQLException {
 
 		Double taxAmount = 0.00d;
 		if (MapUtils.isEmpty(countryTax)) {
 			logger.info("Country has not been defined for taxes ");
-			return taxAmount;
 		} else {
 			String type = ParamUtil.getString(countryTax, AppParams.S_TYPE);
-			Double tax = ParamUtil.getDouble(countryTax, AppParams.S_TAX , 0.00d);
+			Double tax = ParamUtil.getDouble(countryTax, AppParams.S_TAX, 0.00d);
 			if ("percent".equalsIgnoreCase(type)) {
-				taxAmount = orderAmount/100*tax;
+				taxAmount = orderAmount / 100 * tax;
 			} else if ("fix".equalsIgnoreCase(type)) {
 				taxAmount = tax;
 			}
 		}
 		taxAmount = GetterUtil.format(taxAmount, 2);
+
 		return taxAmount;
+	}
+
+	public static boolean checkValidIossNumber(String iossNumber) {
+		if (!AppContextUtil.iossNumber.equals(iossNumber)) {
+			return true;
+		}
+		return false;
 	}
 }

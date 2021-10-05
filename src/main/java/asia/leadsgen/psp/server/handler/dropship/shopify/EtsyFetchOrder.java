@@ -11,6 +11,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import asia.leadsgen.psp.obj.DropshipOrderProductTypeObj;
+import asia.leadsgen.psp.obj.DropshipOrderTypeObj;
+import asia.leadsgen.psp.service_fulfill.DropshipOrderServiceV2;
 import org.apache.commons.lang.StringUtils;
 
 import com.github.scribejava.core.model.OAuth1AccessToken;
@@ -167,21 +170,22 @@ public class EtsyFetchOrder extends PSPOrderHandler {
 			resourceState = ResourceStates.DRAFT;
 		}
 
-		DropshipOrderObj dropshipOrderObj = new DropshipOrderObj.Builder(orderPrefix)
-				.orderAmount(totalAmount)
-				.orderCurrency("USD")
+		DropshipOrderTypeObj dropshipOrderObj = DropshipOrderTypeObj.builder()
+				.idPrefix(orderPrefix)
+				.amount(totalAmount)
+				.currency("USD")
 				.state(resourceState)
 				.shippingId(shippingId)
-				.trackingNumber(AppUtil.generateOrderTrackingNumber())
+				.trackingCode(AppUtil.generateOrderTrackingNumber())
 				.channel(AppConstants.ETSY)
 				.storeId(storeId)
 				.userId(userId)
-				.referenceOrderId(referenceOrderId)
+				.referenceOrder(referenceOrderId)
 				.source(source)
 				.addrVerified(0)
 				.build();
 
-		Map dropshipOrder = DropshipOrderService.insertDropshipOrder(dropshipOrderObj);
+		Map dropshipOrder = DropshipOrderServiceV2.insertDropshipOrderV2(dropshipOrderObj);
 		String orderId = ParamUtil.getString(dropshipOrder, AppParams.ID);
 		return orderId;
 	}
@@ -194,14 +198,15 @@ public class EtsyFetchOrder extends PSPOrderHandler {
 		Map orderItem = new LinkedHashMap<>();
 		if (StringUtils.isEmpty(sku) || !sku.startsWith("BG")) {
 
-			DropshipOrderProductObj dropshipOrderProductObj = new DropshipOrderProductObj.Builder(orderId)
+			DropshipOrderProductTypeObj dropshipOrderProductObj = DropshipOrderProductTypeObj.builder()
+					.orderId(orderId)
 					.campaignId(userId + "-")
 					.variantName(ParamUtil.getString(singleTransactions, AppParams.TITLE))
-					.price(ParamUtil.getDouble(singleTransactions, AppParams.PRICE))
+					.price(String.valueOf(ParamUtil.getDouble(singleTransactions, AppParams.PRICE)))
 					.currency(ParamUtil.getString(singleTransactions, "currency_code"))
 					.quantity(ParamUtil.getInt(singleTransactions, AppParams.QUANTITY))
 					.build();
-			orderItem = DropshipOrderProductService.insertDropshipOrderProduct(dropshipOrderProductObj);
+			orderItem = DropshipOrderProductService.insertDropshipOrderProductV2(dropshipOrderProductObj);
 
 		} else {
 
@@ -244,19 +249,20 @@ public class EtsyFetchOrder extends PSPOrderHandler {
 				productAmount = GetterUtil.format(productAmount + taxAmount, 2);
 				LOGGER.info("+++taxAmount = " + taxAmount);
 
-				DropshipOrderProductObj dropshipOrderProductObj = new DropshipOrderProductObj.Builder(orderId)
+				DropshipOrderProductTypeObj dropshipOrderProductObj = DropshipOrderProductTypeObj.builder()
+						.orderId(orderId)
 						.campaignId(campaignId)
 						.productId(productId)
 						.variantId(variantId)
 						.sizeId(sizeId)
-						.price(baseCost)
-						.shippingFee(shippingFee)
+						.price(String.valueOf(baseCost))
+						.shippingFee(String.valueOf(shippingFee))
 						.currency(ParamUtil.getString(singleTransactions, "currency_code"))
 						.quantity(quantity)
 						.state(ResourceStates.APPROVED)
 						.variantName(variantName)
-						.amount(productAmount)
-						.baseCost(baseCost)
+						.amount(String.valueOf(productAmount))
+						.baseCost(String.valueOf(baseCost))
 						.baseId(baseId)
 						.lineItemId("")
 						.variantFrontUrl(variantFrontUrl)
@@ -267,13 +273,12 @@ public class EtsyFetchOrder extends PSPOrderHandler {
 						.sizeName(sizeName)
 						.shippingMethod(AppParams.STANDARD)
 						.itemType(ResourceStates.NORMAL)
-						.baseShortCode(baseShortCode)
 						.designFrontUrl(designFrontUrl)
 						.designBackUrl(designBackUrl)
-						.taxAmount(taxAmount)
+						.taxAmount(String.valueOf(taxAmount))
 						.build();
 
-				orderItem = DropshipOrderProductService.insertDropshipOrderProduct(dropshipOrderProductObj);
+				orderItem = DropshipOrderProductService.insertDropshipOrderProductV2(dropshipOrderProductObj);
 			}
 		}
 

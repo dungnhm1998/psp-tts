@@ -9,6 +9,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import asia.leadsgen.psp.obj.DropshipOrderProductTypeObj;
+import asia.leadsgen.psp.obj.DropshipOrderTypeObj;
+import asia.leadsgen.psp.service_fulfill.DropshipOrderServiceV2;
 import org.apache.commons.lang.StringUtils;
 
 import asia.leadsgen.psp.error.SystemError;
@@ -95,6 +98,13 @@ public class DropshipOrderCreateCustomHandler extends PSPOrderHandler implements
                     throw new BadRequestException(SystemError.DUPLICATE_REFERENCE_ORDER);
                 }
 
+                String iossNumber = ParamUtil.getString(requestOrderInfoMap, AppParams.IOSS_NUMBER);
+                Boolean isValidIossNumber = OrderUtil.checkValidIossNumber(iossNumber);
+
+                if (!isValidIossNumber) {
+                    throw new BadRequestException(SystemError.INVALID_IOSS_NUMBER);
+                }
+
                 Map shippingInfoMap = ParamUtil.getMapData(requestOrderInfoMap, AppParams.SHIPPING);
                 String name = ParamUtil.getString(shippingInfoMap, AppParams.NAME);
                 String email = ParamUtil.getString(shippingInfoMap, AppParams.EMAIL);
@@ -117,7 +127,6 @@ public class DropshipOrderCreateCustomHandler extends PSPOrderHandler implements
                         countryCode, countryName);
 
                 String shippingId = ParamUtil.getString(shippingMap, AppParams.ID);
-
 
                 String trackingNumber = AppUtil.generateOrderTrackingNumber();
                 List<Map> requestOrderItemList = ParamUtil.getListData(requestOrderInfoMap, AppParams.ITEMS);
@@ -150,23 +159,27 @@ public class DropshipOrderCreateCustomHandler extends PSPOrderHandler implements
                     }
                 }
 
-                DropshipOrderObj dropshipOrderObj = new DropshipOrderObj.Builder(orderIdPrefix)
-                        .orderCurrency(orderCurrency)
+                DropshipOrderTypeObj dropshipOrderObj = DropshipOrderTypeObj.builder()
+                        .idPrefix(orderIdPrefix)
+                        .currency(orderCurrency)
                         .state(ResourceStates.DRAFT)
                         .shippingId(shippingId)
-                        .trackingNumber(trackingNumber)
+                        .trackingCode(trackingNumber)
                         .note(note)
                         .storeId(storeId)
                         .userId(userId)
-                        .referenceOrderId(referenceOrderId)
-                        .totalItems(totalItems)
+                        .referenceOrder(referenceOrderId)
+                        .totalItem(totalItems)
                         .source(source)
                         .addrVerified(isAddrVerified)
+                        .iossNumber(iossNumber)
                         .build();
 
                 LOGGER.info("dropshipOrderObj: " + dropshipOrderObj.toString());
 
-                Map orderInfoMap = DropshipOrderService.insertDropshipOrder(dropshipOrderObj);
+                Map orderInfoMap = DropshipOrderServiceV2.insertDropshipOrderV2(dropshipOrderObj);
+
+                LOGGER.info("---orderInfoMap: " + orderInfoMap.toString());
 
                 Map countryTax = CountryTaxService.getTaxByCountry(countryCode);
 
@@ -174,7 +187,7 @@ public class DropshipOrderCreateCustomHandler extends PSPOrderHandler implements
                 
                 try {
                 	
-                	orderInfoMap = createOrderItems(requestOrderItemList, "", orderId, countryCode, orderCurrency, storeId, referenceOrderId, isAddrVerified, userId, source, shippingMethod, countryTax);
+                	orderInfoMap = createOrderItems(requestOrderItemList, "", orderId, countryCode, orderCurrency, storeId, referenceOrderId, isAddrVerified, userId, source, shippingMethod, countryTax, iossNumber);
 
                     routingContext.put(AppParams.RESPONSE_CODE, HttpResponseStatus.CREATED.code());
                     routingContext.put(AppParams.RESPONSE_MSG, HttpResponseStatus.CREATED.reasonPhrase());
@@ -205,7 +218,7 @@ public class DropshipOrderCreateCustomHandler extends PSPOrderHandler implements
     }
 
     private Map createOrderItems(List<Map> requestOrderItemList, String promotionCode, String orderId, String shippingCountryCode, String orderCurrency,
-                                 String storeId, String referenceOrderId, int isAddrVerified, String userId, String source, String shippingMethod, Map countryTax)
+                                 String storeId, String referenceOrderId, int isAddrVerified, String userId, String source, String shippingMethod, Map countryTax, String iossNumber)
             throws SQLException, ParseException {
     	initItemGroupQuantity();
         List<Map> orderItemList = new ArrayList<>();
@@ -218,15 +231,15 @@ public class DropshipOrderCreateCustomHandler extends PSPOrderHandler implements
         Map shippingInfo = ProductUtil.getShippingInfoForListItems(setBaseId, shippingCountryCode, shippingMethod);
 
         Double totalTax = 0d;
-        
 
-        List<Map> allBase = new ArrayList<Map>();
-        Map listBase = BaseService.getAllBaseCache();
-        listBase.forEach((k, v) -> allBase.addAll((Collection<? extends Map>) v));
+//        List<Map> allBase = new ArrayList<Map>();
+//        Map listBase = BaseService.getAllBaseCache();
+//        listBase.forEach((k, v) -> allBase.addAll((Collection<? extends Map>) v));
         
         for (Map requestItem : requestOrderItemList) {
 
-            Map orderItem = createOrderItem(orderId, requestItem, orderCurrency, promotionCode, shippingCountryCode, userId, source, shippingMethod, referenceOrderId, shippingInfo, countryTax, allBase);
+            Map orderItem = createOrderItem(orderId, requestItem, orderCurrency, promotionCode, shippingCountryCode, userId, source, shippingMethod, referenceOrderId, shippingInfo, countryTax, iossNumber);
+
             double itemAmount = GetterUtil.getDouble(ParamUtil.getString(orderItem, AppParams.AMOUNT));
             int quantity  = GetterUtil.getInteger(ParamUtil.getInt(orderItem, AppParams.QUANTITY));
 
@@ -250,16 +263,17 @@ public class DropshipOrderCreateCustomHandler extends PSPOrderHandler implements
         }
         orderAmount = GetterUtil.format(orderAmount, 2);
         totalTax = GetterUtil.format(totalTax, 2);
-        Map orderInfoMap = DropshipOrderService.updateOrderV2(orderId, orderAmount.toString(), orderCurrency,
-                ResourceStates.QUEUED, StringPool.BLANK, storeId, referenceOrderId, totalItems, isAddrVerified, addrVerifiedNote, totalTax.toString(), totalShippingFee);
 
-        orderInfoMap.put(AppParams.ITEMS, orderItemList);
+        Map orderInfoMap = DropshipOrderService.updateOrderV2(orderId, orderAmount.toString(), orderCurrency,
+                ResourceStates.QUEUED, StringPool.BLANK, storeId, referenceOrderId, totalItems, isAddrVerified, addrVerifiedNote, totalTax.toString(), totalShippingFee, iossNumber);
+
+//        orderInfoMap.put(AppParams.ITEMS, orderItemList);
 
         return orderInfoMap;
     }
 
     private Map createOrderItem(String orderId, Map requestItem, String currency, String promotionCode, String shippingCountryCode,
-                                String userId, String source, String shippingMethod, String referenceOrderId, Map shippingInfo, Map countryTax, List<Map> allBase) throws SQLException {
+                                String userId, String source, String shippingMethod, String referenceOrderId, Map shippingInfo, Map countryTax, String iossNumber) throws SQLException {
 
         LOGGER.info("requestItem: " + requestItem.toString());
         String baseId = ParamUtil.getString(requestItem, AppParams.BASE_ID);
@@ -275,33 +289,25 @@ public class DropshipOrderCreateCustomHandler extends PSPOrderHandler implements
         String colorNameDB = "";
         String sizeNameDB = "";
         
-        boolean checkBaseMap = allBase.stream().filter(m -> (m.get(AppParams.BASE_ID)).equals(baseId)).findFirst().isPresent();
-        LOGGER.info("checkBaseMap: " + checkBaseMap);
-        if (checkBaseMap) {
-        	Map baseMap = allBase.stream().filter(m -> (m.get(AppParams.BASE_ID)).equals(baseId)).findFirst().get();
-        	
-        	List<Map> colorList = ParamUtil.getListData(baseMap, AppParams.COLORS);
-        	boolean checkColorMap = colorList.stream().filter(m -> (m.get(AppParams.ID)).equals(colorId)).findFirst().isPresent();
-        	if (checkColorMap) {
-        		Map colorMap = colorList.stream().filter(m -> (m.get(AppParams.ID)).equals(colorId)).findFirst().get();
-        		colorNameDB = ParamUtil.getString(colorMap, AppParams.NAME);
-        		colorValueDB = ParamUtil.getString(colorMap, AppParams.VALUE);
-        	}
-        	
-        	List<Map> sizeList = ParamUtil.getListData(baseMap, AppParams.SIZES);
-        	boolean checkSizeMap = sizeList.stream().filter(m -> (m.get(AppParams.ID)).equals(sizeId)).findFirst().isPresent();
-        	if (checkSizeMap) {
-        		Map sizeMap = sizeList.stream().filter(m -> (m.get(AppParams.ID)).equals(sizeId)).findFirst().get();
-        		sizeNameDB = ParamUtil.getString(sizeMap, AppParams.NAME);
-        	}
+        Map baseMap = BaseService.get(baseId);
+        if (baseMap == null || baseMap.isEmpty()) {
+        	throw new BadRequestException(SystemError.INVALID_BASE_ID);
         }
+        
+        List<Map> colorList = ParamUtil.getListData(baseMap, AppParams.COLORS);
+        boolean checkColorMap = colorList.stream().filter(m -> (m.get(AppParams.ID)).equals(colorId)).findFirst().isPresent();
+    	if (checkColorMap) {
+    		Map colorMap = colorList.stream().filter(m -> (m.get(AppParams.ID)).equals(colorId)).findFirst().get();
+    		colorNameDB = ParamUtil.getString(colorMap, AppParams.NAME);
+    		colorValueDB = ParamUtil.getString(colorMap, AppParams.VALUE);
+    	}
+        
+    	Map<String, String> baseSizeMap = BaseService.getBaseSizeMap();
+    	sizeNameDB = baseSizeMap.get(sizeId);
+    	
         LOGGER.info("get colorNameDB: " + colorNameDB);
         LOGGER.info("get colorValueDB: " + colorValueDB);
         LOGGER.info("get sizeNameDB: " + sizeNameDB);
-        
-        if (StringUtils.isEmpty(colorNameDB) || StringUtils.isEmpty(sizeNameDB)) {
-        	throw new BadRequestException(SystemError.INVALID_BASE_ID);
-        }
         
         if (!colorNameDB.equalsIgnoreCase(colorName) || !sizeNameDB.equalsIgnoreCase(sizeName)) {
         	LOGGER.info("INVALID COLOR_ID OR SIZE_ID");
@@ -324,14 +330,9 @@ public class DropshipOrderCreateCustomHandler extends PSPOrderHandler implements
         LOGGER.info("campaignId: " + campaignId);
         if (StringUtils.isEmpty(campaignId)) {
             campaignId = userId + "-";
-            String md5 = "";
-            try {
-                md5 = Common.getMD5(design_front_url_md5 + design_back_url_md5);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            String uuid = Common.getUUID();
             if (StringUtils.isNotEmpty(design_front_url_md5) || StringUtils.isNotEmpty(design_back_url_md5)) {
-                campaignId = campaignId + md5;
+                campaignId = campaignId + uuid;
             } else {
                 LOGGER.info("INVALID_DESIGN");
                 throw new BadRequestException(SystemError.INVALID_DESIGN);
@@ -361,23 +362,27 @@ public class DropshipOrderCreateCustomHandler extends PSPOrderHandler implements
 
         double productAmount = GetterUtil.format(baseCost * quantity + shippingFee, 2);
         LOGGER.info("+++productAmount = " + productAmount);
-        Double taxAmount = OrderUtil.getTaxByAmountAndByCountry(productAmount,countryTax);
+        Double taxAmount =0d;
+        if (StringUtils.isEmpty(iossNumber)) {
+            taxAmount = OrderUtil.getTaxByAmountAndByCountry(productAmount, countryTax);
+        }
         productAmount = GetterUtil.format(productAmount + taxAmount, 2);
         LOGGER.info("+++taxAmount = " + taxAmount);
 
-        DropshipOrderProductObj orderProductObj = new DropshipOrderProductObj.Builder(orderId)
+        DropshipOrderProductTypeObj orderProductObj = DropshipOrderProductTypeObj.builder()
+                .orderId(orderId)
                 .campaignId(campaignId)
                 .productId(productId)
                 .variantId(variantId)
                 .sizeId(sizeId)
-                .price(baseCost)
-                .shippingFee(shippingFee)
+                .price(String.valueOf(baseCost))
+                .shippingFee(String.valueOf(shippingFee))
                 .currency(currency)
                 .quantity(quantity)
                 .state(ResourceStates.APPROVED)
                 .variantName(variantName)
-                .amount(productAmount)
-                .baseCost(baseCost)
+                .amount(String.valueOf(productAmount))
+                .baseCost(String.valueOf(baseCost))
                 .baseId(baseId)
                 .lineItemId(referenceOrderId)
                 .variantFrontUrl(mockup_front_url)
@@ -395,11 +400,11 @@ public class DropshipOrderCreateCustomHandler extends PSPOrderHandler implements
                 .designFrontUrl(designFrontUrl)
                 .designBackUrl(designBackUrl)
                 .unitAmount(unitAmount)
-                .taxAmount(taxAmount)
+                .taxAmount(String.valueOf(taxAmount))
                 .build();
 
         LOGGER.info("orderProductObj: " + orderProductObj.toString());
-        Map orderItem = DropshipOrderProductService.insertDropshipOrderProduct(orderProductObj);
+        Map orderItem = DropshipOrderProductService.insertDropshipOrderProductV2(orderProductObj);
 
 //		if (variantId != null && variantId.isEmpty() == false) {
 //			ShopifyAppService.orderProductUpdateThumbUrl(variantId, orderId);

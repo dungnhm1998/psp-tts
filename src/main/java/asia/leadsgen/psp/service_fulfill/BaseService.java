@@ -240,10 +240,11 @@ public class BaseService extends MasterService {
 	}
 
 	public static Map<String, String> getBaseSizeMap() throws SQLException {
-		if (baseSizeMap == null || baseSizeMap.isEmpty()) {
-			baseSizeMap = computeSizeMap();
+		Map redis = RedisService.getMap(RedisKeyEnum.BASE_SIZE_MAP);
+		if (redis == null || redis.isEmpty()) {
+			redis = computeSizeMap();
 		}
-		return baseSizeMap;
+		return redis;
 	}
 
 	public static Map<String, String> computeSizeMap() throws SQLException {
@@ -276,7 +277,7 @@ public class BaseService extends MasterService {
 			sizeMap.put(ParamUtil.getString(data, AppParams.S_ID), ParamUtil.getString(data, AppParams.S_NAME));
 		}
 
-		return sizeMap;
+		return RedisService.persistMap(RedisKeyEnum.BASE_SIZE_MAP, sizeMap);
 	}
 
 	public static List<Map> getBaseBaseTypeAndBaseGroupName(boolean toCreateOrderDropship) throws SQLException {

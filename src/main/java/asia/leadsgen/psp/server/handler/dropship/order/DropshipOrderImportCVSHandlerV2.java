@@ -579,7 +579,7 @@ public class DropshipOrderImportCVSHandlerV2 extends PSPOrderHandler implements 
 		java.util.Map productInfoMap = ProductService.getV2(productId, true, false, false, false);
 		if (!productInfoMap.isEmpty()) {
 			java.util.Map base = ParamUtil.getMapData(productInfoMap, AppParams.BASE);
-			String baseShortCode = ParamUtil.getString(base, AppParams.BASE_SHORT_CODE);
+			String baseShortCode = ParamUtil.getString(base, AppParams.SHORT_CODE);
 			String campaignId = ParamUtil.getString(productInfoMap, AppParams.CAMPAIGN_ID);
 			prefix.append(campaignId).append(StringPool.DASH).append(baseShortCode);
 		}

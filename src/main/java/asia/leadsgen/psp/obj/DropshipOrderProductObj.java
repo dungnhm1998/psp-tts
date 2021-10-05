@@ -297,7 +297,7 @@ public class DropshipOrderProductObj {
 
 	@Override
 	public String toString() {
-		return "DropshipOrderProductTypeObj"
+		return "DropshipOrderProductObj"
 				+ " [id=" + id
 				+ ", orderId=" + orderId
 				+ ", campaignId=" + campaignId

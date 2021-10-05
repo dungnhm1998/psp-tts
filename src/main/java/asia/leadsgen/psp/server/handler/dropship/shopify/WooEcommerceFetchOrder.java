@@ -15,6 +15,9 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import asia.leadsgen.psp.obj.DropshipOrderProductTypeObj;
+import asia.leadsgen.psp.obj.DropshipOrderTypeObj;
+import asia.leadsgen.psp.service_fulfill.DropshipOrderServiceV2;
 import org.apache.commons.lang.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -417,25 +420,26 @@ public class WooEcommerceFetchOrder extends PSPOrderHandler {
 	public static Map create_dropship_order(String userId, String storeId, String channel, String shippingId,
 											String orderNameShopify, String trackingNumber, String orderIdPrefix, String state, String source,
 											int addr_verified, String originalId) throws SQLException, ParseException {
-		DropshipOrderObj dropshipOrderObj = new DropshipOrderObj();
+		DropshipOrderTypeObj dropshipOrderObj = DropshipOrderTypeObj.builder()
+				.idPrefix(orderIdPrefix)
+				.currency("USD")
+				.state(state)
+				.shippingId(shippingId)
+				.trackingCode(trackingNumber)
+				.note("")
+				.channel(channel)
+				.storeId(storeId)
+				.userId(userId)
+				.referenceOrder(orderNameShopify)
+				.source(source)
+				.addrVerified(addr_verified)
+				.originalId(originalId)
+				.shippingMethod(AppParams.STANDARD)
+				.build();
 
-		dropshipOrderObj.setOrderIdPrefix(orderIdPrefix);
-		dropshipOrderObj.setOrderCurrency("USD");
-		dropshipOrderObj.setState(state);
-		dropshipOrderObj.setShippingId(shippingId);
-		dropshipOrderObj.setTrackingNumber(trackingNumber);
-		dropshipOrderObj.setNote("");
-		dropshipOrderObj.setChannel(channel);
-		dropshipOrderObj.setStoreId(storeId);
-		dropshipOrderObj.setUserId(userId);
-		dropshipOrderObj.setReferenceOrderId(orderNameShopify);
-		dropshipOrderObj.setSource(source);
-		dropshipOrderObj.setAddrVerified(addr_verified);
-		dropshipOrderObj.setOriginalId(originalId);
-		dropshipOrderObj.setShippingMethod(AppParams.STANDARD);
 		LOGGER.info("dropshipOrderObj=" + dropshipOrderObj.toString());
 
-		Map dropshipOrder = DropshipOrderService.insertDropshipOrder(dropshipOrderObj);
+		Map dropshipOrder = DropshipOrderServiceV2.insertDropshipOrderV2(dropshipOrderObj);
 		return dropshipOrder;
 	}
 
@@ -692,19 +696,20 @@ public class WooEcommerceFetchOrder extends PSPOrderHandler {
 			productAmount = GetterUtil.format(productAmount + taxAmount, 2);
 			LOGGER.info("+++taxAmount = " + taxAmount);
 
-			DropshipOrderProductObj orderProductObj = new DropshipOrderProductObj.Builder(orderId)
+			DropshipOrderProductTypeObj orderProductObj = DropshipOrderProductTypeObj.builder()
+					.orderId(orderId)
 					.campaignId(campaignId)
 					.productId(productId)
 					.variantId(variantId)
 					.sizeId(sizeId)
-					.price(baseCost)
-					.shippingFee(shippingFee)
+					.price(String.valueOf(baseCost))
+					.shippingFee(String.valueOf(shippingFee))
 					.currency("USD")
 					.quantity(quantity)
 					.state(ResourceStates.APPROVED)
 					.variantName(variantName)
-					.amount(productAmount)
-					.baseCost(baseCost)
+					.amount(String.valueOf(productAmount))
+					.baseCost(String.valueOf(baseCost))
 					.baseId(baseId)
 					.lineItemId(orderReferenceId)
 					.variantFrontUrl(variantFrontUrl)
@@ -719,13 +724,12 @@ public class WooEcommerceFetchOrder extends PSPOrderHandler {
 					.itemType(ResourceStates.NORMAL)
 //					.partnerProperties(setPartnerProperties)
 //					.partnerOption(setPartnerOption)
-					.baseShortCode(baseShortCode)
 					.designFrontUrl(designFrontUrl)
 					.designBackUrl(designBackUrl)
-					.taxAmount(taxAmount)
+					.taxAmount(String.valueOf(taxAmount))
 					.build();
 
-			orderItem = DropshipOrderProductService.insertDropshipOrderProduct(orderProductObj);
+			orderItem = DropshipOrderProductService.insertDropshipOrderProductV2(orderProductObj);
 			orderItem.put(AppParams.SUBTOTAL, productSubTotal);
 
 		}
@@ -762,7 +766,7 @@ public class WooEcommerceFetchOrder extends PSPOrderHandler {
 				variantName += " / " + partnerOption.getString(key);
 		}
 
-		DropshipOrderProductObj orderProductObj = new DropshipOrderProductObj.Builder(orderId).build();
+		DropshipOrderProductTypeObj orderProductObj = DropshipOrderProductTypeObj.builder().orderId(orderId).build();
 
 		if (partnerOption.has("size") && partnerOption.get("size") instanceof String) {
 			orderProductObj.setSizeName(partnerOption.getString("size"));
@@ -776,17 +780,16 @@ public class WooEcommerceFetchOrder extends PSPOrderHandler {
 		partnerProperties.put(AppParams.PARTNER_URL, s_partner_url);
 
 		orderProductObj.setPartnerSku(vObj.getString("sku"));
-		orderProductObj.setBaseShortCode("");
 		orderProductObj.setProductId(product_id);
 		orderProductObj.setVariantId(variation_id);
-		orderProductObj.setPrice(baseCost);
-		orderProductObj.setShippingFee(shippingFee);
+		orderProductObj.setPrice(String.valueOf(baseCost));
+		orderProductObj.setShippingFee(String.valueOf(shippingFee));
 		orderProductObj.setCurrency("USD");
 		orderProductObj.setQuantity(quantity);
 		orderProductObj.setState(ResourceStates.APPROVED);
 		orderProductObj.setVariantName(variantName);
-		orderProductObj.setAmount(productAmount);
-		orderProductObj.setBaseCost(baseCost);
+		orderProductObj.setAmount(String.valueOf(productAmount));
+		orderProductObj.setBaseCost(String.valueOf(baseCost));
 		orderProductObj.setLineItemId(orderReferenceId);
 		orderProductObj.setVariantFrontUrl(front_mockup);
 		orderProductObj.setVariantFrontUrl(front_mockup);
@@ -794,10 +797,10 @@ public class WooEcommerceFetchOrder extends PSPOrderHandler {
 		orderProductObj.setPartnerOption(partnerOption.toString());
 		orderProductObj.setPartnerProperties(partnerProperties.toString());
 		orderProductObj.setShippingMethod(AppParams.STANDARD);
-		orderProductObj.setTaxAmount(taxAmount);
+		orderProductObj.setTaxAmount(String.valueOf(taxAmount));
 
 		LOGGER.info("orderProductObj: " + orderProductObj.toString());
-		Map orderItem = DropshipOrderProductService.insertDropshipOrderProduct(orderProductObj);
+		Map orderItem = DropshipOrderProductService.insertDropshipOrderProductV2(orderProductObj);
 
 		orderItem.put(AppParams.SUBTOTAL, productSubTotal);
 

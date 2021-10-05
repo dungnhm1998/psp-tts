@@ -29,6 +29,7 @@ import asia.leadsgen.psp.data.type.EmailMarketingEnum;
 import asia.leadsgen.psp.error.SystemError;
 import asia.leadsgen.psp.exception.MailException;
 import asia.leadsgen.psp.obj.EmailObj;
+import asia.leadsgen.psp.obj.EmailTemplate;
 import asia.leadsgen.psp.obj.OrderItemObj;
 import asia.leadsgen.psp.obj.OrderObj;
 import asia.leadsgen.psp.obj.PartnerObj;
@@ -804,6 +805,48 @@ public class MailUtil {
 
 		} catch (Exception e) {
 			LOGGER.log(Level.WARNING, "Exception while sending confirmation email for user: " + email, e);
+		}
+	}
+	
+	public static void sendNotificationEmailToPartner(Map partnerInfoMap) {
+
+		String partnerId = ParamUtil.getString(partnerInfoMap, AppParams.ID);
+
+		try {
+
+			LOGGER.info("Processing notification email for partner: " + partnerId);
+			EmailTemplate emailTemplate = EmailTemplateService.getByType(AppConstants.PARTNER_NOTIFICATION_EMAIL);
+			if (emailTemplate == null) {
+				LOGGER.severe("Missing email template which key= " + AppConstants.PARTNER_NOTIFICATION_EMAIL);
+			} else {
+				String email = ParamUtil.getString(partnerInfoMap, AppParams.EMAIL);
+				SimpleDateFormat dateFormat = new SimpleDateFormat("EEEE MMM dd, yyyy");
+				String date = dateFormat.format(new Date());
+
+				Context mailContext = new Context();
+				mailContext.setVariable(AppParams.EMAIL, email);
+				mailContext.setVariable(AppParams.NAME, ParamUtil.getString(partnerInfoMap, AppParams.NAME));
+				mailContext.setVariable(AppParams.ASSIGNED_PRODUCTS,
+						ParamUtil.getString(partnerInfoMap, AppParams.ASSIGNED_PRODUCTS));
+				mailContext.setVariable(AppParams.ASSIGNED_CAMPAIGNS,
+						ParamUtil.getString(partnerInfoMap, AppParams.ASSIGNED_CAMPAIGNS));
+				mailContext.setVariable(AppParams.DATE, date);
+
+				TemplateEngine templateEngine = new TemplateEngine();
+
+				String mailContent = templateEngine.process(emailTemplate.getContent(), mailContext);
+				String content = compress(mailContent);
+				int sendAfterDays = 0;
+
+				EmailObj obj = new EmailObj(AppConstants.EMAIL_MARKETING_TYPE_NOTIFY, email, emailTemplate.getSubject(),
+						content, "pending", "", "image", sendAfterDays);
+				EmailMarketingService.insert(obj);
+
+				LOGGER.info("Email marketing queue success!");
+			}
+
+		} catch (Exception e) {
+			LOGGER.log(Level.WARNING, "Exception while sending notification email for partner ", e);
 		}
 	}
 

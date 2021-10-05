@@ -12,6 +12,7 @@ import javax.sql.DataSource;
 import asia.leadsgen.psp.error.SystemError;
 import asia.leadsgen.psp.exception.BadRequestException;
 import asia.leadsgen.psp.exception.OracleException;
+import asia.leadsgen.psp.obj.EmailTemplate;
 import asia.leadsgen.psp.util.AppParams;
 import asia.leadsgen.psp.util.DBProcedurePool;
 import asia.leadsgen.psp.util.DBProcedureUtil;
@@ -23,7 +24,9 @@ import oracle.jdbc.OracleTypes;
  * Created by hungdx on 4/1/17.
  */
 public class EmailTemplateService {
-
+	
+	public static final String MAIL_TEMPLATE_GET_BY_TYPE = "{call PKG_EMAIL_TEMPLATE.get_by_type(?,?,?,?)}";
+	
     private static DataSource dataSource;
 
     public void setDataSource(DataSource dataSource) {
@@ -151,7 +154,16 @@ public class EmailTemplateService {
 
         return format(resultDataList.get(0), true);
     }
-
+    
+    public static EmailTemplate getByType(String type) throws SQLException {
+		List<Map> resultList = MasterService.excuteQuery(MAIL_TEMPLATE_GET_BY_TYPE,
+				new Object[] { type });
+		if (resultList != null && resultList.isEmpty() == false) {
+			return EmailTemplate.fromMap(resultList.get(0));
+		}
+		return null;
+	}
+    
     private static Map format(Map queryData, boolean isGetContent) throws SQLException {
 
         Map resultMap = new LinkedHashMap<>();

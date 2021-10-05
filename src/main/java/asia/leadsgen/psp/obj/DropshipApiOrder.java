@@ -53,4 +53,8 @@ public class DropshipApiOrder {
 	@Expose
 	private Boolean ignoreAddressCheck;
 
+	@SerializedName("ioss_number")
+	@Expose
+	private String iossNumber;
+
 }

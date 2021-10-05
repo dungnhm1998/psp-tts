@@ -37,7 +37,7 @@ public class DropshipOrderService extends MasterService {
 	static final String DROPSHIP_ORDER_UPDATE = "{call pkg_dropship_order.update_order(?,?,?,?,?,?,?,?,?,?,?,?,?)}";
 	static final String DROPSHIP_ORDER_SEARCH = "{call pkg_dropship_order.search_order(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)}";
 	
-	static final String DROPSHIP_ORDER_INSERT = "{call pkg_ff_dropship_order.insert_dropship_order(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)}";
+	static final String DROPSHIP_ORDER_INSERT = "{call pkg_ff_dropship_order.insert_dropship_order(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)}";
 	static final String DROPSHIP_ORDER_CHECK_CONFLICT = "{call pkg_dropship_order.order_csv_check_exist(?,?,?,?,?)}";
 	static final String DROPSHIP_ORDER_VALIDATION_SOURCE = "{call pkg_dropship_order.validation_source_order_by_variant_and_user_id(?,?,?,?)}";
 	static final String DROPSHIP_ORDER_DELETE_BY_ID_CSV_IMPORT = "{call pkg_dropship_order.order_csv_delete_by_order_id(?,?,?)}";
@@ -46,7 +46,7 @@ public class DropshipOrderService extends MasterService {
 	
 	static final String DROPSHIP_ORDER_SEARCH_V2 = "{call pkg_ff_dropship_order.search_order(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)}";
 	static final String DROPSHIP_ORDER_LOOKUP_V2 = "{call pkg_ff_dropship_order.look_up(?,?,?,?)}";
-	static final String DROPSHIP_ORDER_UPDATE_V2 = "{call pkg_ff_dropship_order.update_order(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)}";
+	static final String DROPSHIP_ORDER_UPDATE_V2 = "{call pkg_ff_dropship_order.update_order(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)}";
 	static final String DROPSHIP_ORDER_UPDATE_STATE_V2 = "{call pkg_ff_dropship_order.update_state(?,?,?,?,?)}";
 	static final String DROPSHIP_ORDER_DELETE = "{call pkg_ff_dropship_order.delete_order(?,?,?)}";
 	static final String DROPSHIP_ORDER_PAYALL_QUEUED_ORDER = "{call pkg_ff_dropship_order.payall_queued_order(?,?,?,?,?,?,?)}";
@@ -548,6 +548,7 @@ public class DropshipOrderService extends MasterService {
 		el.put(AppParams.SHIPPING, ShippingService.get(ParamUtil.getString(data, AppParams.S_SHIPPING_ID)));
 		el.put(AppParams.STORE_DOMAIN, ParamUtil.getString(data, AppParams.S_STORE_DOMAIN));
 		el.put(AppParams.REFERENCE_ID, ParamUtil.getString(data, AppParams.S_REFERENCE_ORDER));
+		el.put(AppParams.IOSS_NUMBER, ParamUtil.getString(data, AppParams.S_IOSS_NUMBER));
 
 		Double amount = ParamUtil.getDouble(data, AppParams.S_AMOUNT, 0);
 		Double refundedAmount = ParamUtil.getDouble(data, AppParams.S_REFUNDED_AMOUNT, 0);
@@ -864,7 +865,7 @@ public class DropshipOrderService extends MasterService {
 
 	public static Map updateOrderV2(String orderId, String orderAmount, String orderCurrency, String state,
 			String shippingId, String storeId, String referenceOrderId, int totalItems, int addrVerified,
-			String addrVerifiedNote, String taxAmount, double shippingFee ) throws SQLException, ParseException {
+			String addrVerifiedNote, String taxAmount, double shippingFee, String note) throws SQLException, ParseException {
 
 		Map inputParams = new LinkedHashMap<Integer, String>();
 		inputParams.put(1, orderId);
@@ -879,16 +880,17 @@ public class DropshipOrderService extends MasterService {
 		inputParams.put(10, addrVerifiedNote);
 		inputParams.put(11, taxAmount);
 		inputParams.put(12, shippingFee);
+		inputParams.put(13, note);
 
 		Map<Integer, Integer> outputParamsTypes = new LinkedHashMap<>();
-		outputParamsTypes.put(13, OracleTypes.NUMBER);
-		outputParamsTypes.put(14, OracleTypes.VARCHAR);
-		outputParamsTypes.put(15, OracleTypes.CURSOR);
+		outputParamsTypes.put(14, OracleTypes.NUMBER);
+		outputParamsTypes.put(15, OracleTypes.VARCHAR);
+		outputParamsTypes.put(16, OracleTypes.CURSOR);
 
 		Map<Integer, String> outputParamsNames = new LinkedHashMap<>();
-		outputParamsNames.put(13, AppParams.RESULT_CODE);
-		outputParamsNames.put(14, AppParams.RESULT_MSG);
-		outputParamsNames.put(15, AppParams.RESULT_DATA);
+		outputParamsNames.put(14, AppParams.RESULT_CODE);
+		outputParamsNames.put(15, AppParams.RESULT_MSG);
+		outputParamsNames.put(16, AppParams.RESULT_DATA);
 
 		Map resultMap = DBProcedureUtil.execute(dataSource, DROPSHIP_ORDER_UPDATE_V2, inputParams,
 				outputParamsTypes, outputParamsNames);
@@ -905,7 +907,7 @@ public class DropshipOrderService extends MasterService {
 		return resultMap;
 	}
 
-	private static Map formatV2(Map data, boolean itemList, boolean campaignInfo, boolean paymentInfo)
+	public static Map formatV2(Map data, boolean itemList, boolean campaignInfo, boolean paymentInfo)
 			throws SQLException, ParseException {
 		Map el = new LinkedHashMap<>();
 		String id = ParamUtil.getString(data, AppParams.S_ID);
@@ -931,6 +933,7 @@ public class DropshipOrderService extends MasterService {
 		el.put(AppParams.SOURCE, ParamUtil.getString(data, AppParams.S_SOURCE));
 		el.put(AppParams.SHIPPING_METHOD, ParamUtil.getString(data, AppParams.S_SHIPPING_METHOD));
 		el.put(AppParams.FULFILL_STATE, calculateFulfillState(data));
+		el.put(AppParams.IOSS_NUMBER, ParamUtil.getString(data, AppParams.S_IOSS_NUMBER));
 
 		Map shipping = ShippingService.get(ParamUtil.getString(data, AppParams.S_SHIPPING_ID));
 		if (shipping != null && shipping.isEmpty() == false) {
@@ -1481,16 +1484,17 @@ public class DropshipOrderService extends MasterService {
 		inputParams.put(18, obj.getShippingMethod());
 		inputParams.put(19, obj.getOriginalId());
 		inputParams.put(20, obj.getTaxAmount());
+		inputParams.put(21, obj.getIossNumber());
 
 		Map<Integer, Integer> outputParamsTypes = new LinkedHashMap<>();
-		outputParamsTypes.put(21, OracleTypes.NUMBER);
-		outputParamsTypes.put(22, OracleTypes.VARCHAR);
-		outputParamsTypes.put(23, OracleTypes.CURSOR);
+		outputParamsTypes.put(22, OracleTypes.NUMBER);
+		outputParamsTypes.put(23, OracleTypes.VARCHAR);
+		outputParamsTypes.put(24, OracleTypes.CURSOR);
 
 		Map<Integer, String> outputParamsNames = new LinkedHashMap<>();
-		outputParamsNames.put(21, AppParams.RESULT_CODE);
-		outputParamsNames.put(22, AppParams.RESULT_MSG);
-		outputParamsNames.put(23, AppParams.RESULT_DATA);
+		outputParamsNames.put(22, AppParams.RESULT_CODE);
+		outputParamsNames.put(23, AppParams.RESULT_MSG);
+		outputParamsNames.put(24, AppParams.RESULT_DATA);
 
 		Map resultMap = DBProcedureUtil.execute(dataSource, DROPSHIP_ORDER_INSERT, inputParams,
 				outputParamsTypes, outputParamsNames);
@@ -1500,8 +1504,7 @@ public class DropshipOrderService extends MasterService {
 		}
 		List<Map> resultDataList = ParamUtil.getListData(resultMap, AppParams.RESULT_DATA);
 		if (resultDataList.isEmpty()) {
-			// throw new OracleException(ParamUtil.getString(resultMap,
-			// AppParams.RESULT_MSG));
+			// throw new OracleException(ParamUtil.getString(resultMap, AppParams.RESULT_MSG));
 			return Collections.EMPTY_MAP;
 		}
 		resultMap = formatV2(resultDataList.get(0), true, true, false);
@@ -1837,6 +1840,6 @@ public class DropshipOrderService extends MasterService {
 
 		return resultMap;
 	}
-	
+
 	private static final Logger LOGGER = Logger.getLogger(DropshipOrderService.class.getName());
 }

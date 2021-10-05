@@ -17,6 +17,9 @@ import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import asia.leadsgen.psp.obj.DropshipOrderProductTypeObj;
+import asia.leadsgen.psp.obj.DropshipOrderTypeObj;
+import asia.leadsgen.psp.service_fulfill.DropshipOrderServiceV2;
 import org.apache.commons.lang.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -619,15 +622,16 @@ public class ShopifyFetchOrder extends PSPOrderHandler {
 			String orderNameShopify, String trackingNumber, String orderIdPrefix, String state, String source,
 			int addrVerified, String originalId) throws SQLException, ParseException {
 
-		DropshipOrderObj dropshipOrderObj = new DropshipOrderObj.Builder(orderIdPrefix)
-				.orderCurrency("USD")
+		DropshipOrderTypeObj dropshipOrderObj = DropshipOrderTypeObj.builder()
+				.idPrefix(orderIdPrefix)
+				.currency("USD")
 				.state(state)
 				.shippingId(shippingId)
-				.trackingNumber(trackingNumber)
+				.trackingCode(trackingNumber)
 				.channel(channel)
 				.storeId(storeId)
 				.userId(userId)
-				.referenceOrderId(orderNameShopify)
+				.referenceOrder(orderNameShopify)
 				.source(source)
 				.addrVerified(addrVerified)
 				.originalId(originalId)
@@ -636,7 +640,7 @@ public class ShopifyFetchOrder extends PSPOrderHandler {
 
 		LOGGER.info("dropshipOrderObj=" + dropshipOrderObj.toString());
 
-		Map dropshipOrder = DropshipOrderService.insertDropshipOrder(dropshipOrderObj);
+		Map dropshipOrder = DropshipOrderServiceV2.insertDropshipOrderV2(dropshipOrderObj);
 		return dropshipOrder;
 	}
 
@@ -840,15 +844,16 @@ public class ShopifyFetchOrder extends PSPOrderHandler {
 				JsonObject partnerProperties = new JsonObject();
 				partnerProperties.put(AppParams.PARTNER_URL, partnerUrl);
 
-				DropshipOrderProductObj orderProductObj = new DropshipOrderProductObj.Builder(orderId)
-						.price(sellerBaseCost)
-						.shippingFee(shippingFee)
+				DropshipOrderProductTypeObj orderProductObj = DropshipOrderProductTypeObj.builder()
+						.orderId(orderId)
+						.price(String.valueOf(sellerBaseCost))
+						.shippingFee(String.valueOf(shippingFee))
 						.currency("USD")
 						.quantity(quantity)
 						.state(ResourceStates.APPROVED)
 						.variantName(variantName)
-						.amount(productAmount)
-						.baseCost(sellerBaseCost)
+						.amount(String.valueOf(productAmount))
+						.baseCost(String.valueOf(sellerBaseCost))
 						.lineItemId(lineItemId)
 						.variantFrontUrl(variantFrontUrl)
 						.partnerSku(partnerSku)
@@ -856,12 +861,12 @@ public class ShopifyFetchOrder extends PSPOrderHandler {
 						.partnerProperties(partnerProperties.toString())
 						.partnerOption(partnerOption.toString())
 						.shippingMethod(AppParams.STANDARD)
-						.taxAmount(taxAmount)
+						.taxAmount(String.valueOf(taxAmount))
 						.sizeName(partnerSize)
 						.colorName(partnerColor)
 						.build();
 
-				orderItem = DropshipOrderProductService.insertDropshipOrderProduct(orderProductObj);
+				orderItem = DropshipOrderProductService.insertDropshipOrderProductV2(orderProductObj);
 
 				if (orderItem != null && orderItem.isEmpty() == false) {
 					orderItem.put(AppParams.SUBTOTAL, productSubTotal);
@@ -931,19 +936,20 @@ public class ShopifyFetchOrder extends PSPOrderHandler {
 			productAmount = GetterUtil.format(productAmount + taxAmount, 2);
 			LOGGER.info("+++taxAmount = " + taxAmount);
 
-			DropshipOrderProductObj orderProductObj = new DropshipOrderProductObj.Builder(orderId)
+			DropshipOrderProductTypeObj orderProductObj = DropshipOrderProductTypeObj.builder()
+					.orderId(orderId)
 					.campaignId(campaignId)
 					.productId(productId)
 					.variantId(variantId)
 					.sizeId(sizeId)
-					.price(baseCost)
-					.shippingFee(shippingFee)
+					.price(String.valueOf(baseCost))
+					.shippingFee(String.valueOf(shippingFee))
 					.currency("USD")
 					.quantity(quantity)
 					.state(ResourceStates.APPROVED)
 					.variantName(variantName)
-					.amount(productAmount)
-					.baseCost(baseCost)
+					.amount(String.valueOf(productAmount))
+					.baseCost(String.valueOf(baseCost))
 					.baseId(baseId)
 					.lineItemId(line_item_id)
 					.variantFrontUrl(variantFrontUrl)
@@ -958,13 +964,12 @@ public class ShopifyFetchOrder extends PSPOrderHandler {
 					.itemType(ResourceStates.NORMAL)
 //					.partnerProperties(setPartnerProperties)
 //					.partnerOption(setPartnerOption)
-					.baseShortCode(baseShortCode)
 					.designFrontUrl(designFrontUrl)
 					.designBackUrl(designBackUrl)
-					.taxAmount(taxAmount)
+					.taxAmount(String.valueOf(taxAmount))
 					.build();
 
-			orderItem = DropshipOrderProductService.insertDropshipOrderProduct(orderProductObj);
+			orderItem = DropshipOrderProductService.insertDropshipOrderProductV2(orderProductObj);
 			
 			orderItem.put(AppParams.SUBTOTAL, productSubTotal);
 

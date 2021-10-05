@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import asia.leadsgen.psp.obj.DropshipOrderTypeObj;
+import asia.leadsgen.psp.service_fulfill.DropshipOrderServiceV2;
 import org.apache.commons.lang.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -286,15 +288,16 @@ public class WebhookShopifyCreateOrderHandler extends PSPOrderHandler implements
 		String trackingNumber = AppUtil.generateOrderTrackingNumber();
 		String orderIdPrefix = userId + "-SPF-APP";
 
-		DropshipOrderObj dropshipOrderObj = new DropshipOrderObj.Builder(orderIdPrefix)
-				.orderCurrency("USD")
+		DropshipOrderTypeObj dropshipOrderObj = DropshipOrderTypeObj.builder()
+				.idPrefix(orderIdPrefix)
+				.currency("USD")
 				.state(state)
 				.shippingId(shippingId)
-				.trackingNumber(trackingNumber)
+				.trackingCode(trackingNumber)
 				.channel(channel)
 				.storeId(storeId)
 				.userId(userId)
-				.referenceOrderId(referenceOrderId)
+				.referenceOrder(referenceOrderId)
 				.source(source)
 				.minifiedJson(body_string)
 				.originalId(originalId)
@@ -303,7 +306,7 @@ public class WebhookShopifyCreateOrderHandler extends PSPOrderHandler implements
 		
 		LOGGER.info("dropshipOrderObj=" + dropshipOrderObj.toString());
 
-		order = DropshipOrderService.insertDropshipOrder(dropshipOrderObj);
+		order = DropshipOrderServiceV2.insertDropshipOrderV2(dropshipOrderObj);
 
 		if (!order.isEmpty()) {
 			

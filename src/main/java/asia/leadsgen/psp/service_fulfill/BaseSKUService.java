@@ -28,6 +28,8 @@ public class BaseSKUService extends MasterService {
 	static final String POST_SKU_DEFAULT = "matte-poster|one|white";
 	private static final String GET_SKU_BY_PARTER_ID_BASE_ID_COLOR_ID = "{call PKG_FF_BASE_SKU.get_sku_by_parter_id_base_id_color_id(?,?,?,?,?,?)}";
 	private static final String GET_SKU_BY_BASE_ID_SIZE_ID_COLOR_NAME = "{call PKG_FF_BASE_SKU.get_sku_by_base_id_size_id_color_name(?,?,?,?,?,?)}";
+	
+	private static final String GET_BASE_SKU_BY_BASE_SIZE_COLOR_PARTNER_ID = "{call PKG_FF_BASE_SKU.get_base_sku_by_base_size_color_partner_id(?,?,?,?,?,?,?)}";
 
 	public static HashMap<String, String> POSTER_BASES = new HashMap<String, String>() {
 		private static final long serialVersionUID = 1L;
@@ -151,6 +153,42 @@ public class BaseSKUService extends MasterService {
 //			result = resultDataList.get(0);
 //		}
 		return resultDataList;
+	}
+	
+	public static Map getBaseSkuByBaseIdAndSizeIdAndColorPartnerId(String baseId, String sizeId, String colorId,String partnerId) throws SQLException {
+		
+		Map inputParams = new LinkedHashMap<Integer, String>();
+		inputParams.put(1, baseId);
+		inputParams.put(2, sizeId);
+		inputParams.put(3, colorId);
+		inputParams.put(4, partnerId);
+
+		Map<Integer, Integer> outputParamsTypes = new LinkedHashMap<>();
+		outputParamsTypes.put(5, OracleTypes.NUMBER);
+		outputParamsTypes.put(6, OracleTypes.VARCHAR);
+		outputParamsTypes.put(7, OracleTypes.CURSOR);
+
+		Map<Integer, String> outputParamsNames = new LinkedHashMap<>();
+		outputParamsNames.put(5, AppParams.RESULT_CODE);
+		outputParamsNames.put(6, AppParams.RESULT_MSG);
+		outputParamsNames.put(7, AppParams.RESULT_DATA);
+
+		Map resultMap = DBProcedureUtil.execute(dataSource, GET_BASE_SKU_BY_BASE_SIZE_COLOR_PARTNER_ID, inputParams,
+				outputParamsTypes, outputParamsNames);
+
+		int resultCode = ParamUtil.getInt(resultMap, AppParams.RESULT_CODE);
+		if (resultCode != HttpResponseStatus.OK.code()) {
+			logger.info("getBaseSkuByBaseIdAndSizeIdAndColorPartnerId Error input : baseId,size,color,partner= " + inputParams);
+			logger.severe(
+					"getBaseSkuByBaseIdAndSizeIdAndColorPartnerId Error msg " + ParamUtil.getString(resultMap, AppParams.RESULT_MSG));
+			throw new OracleException(ParamUtil.getString(resultMap, AppParams.RESULT_MSG));
+		}
+		List<Map> resultData = ParamUtil.getListData(resultMap, AppParams.RESULT_DATA);
+		if (CollectionUtils.isEmpty(resultData)) {
+			return null;
+		}
+		
+		return resultData.get(0);
 	}
 
 }

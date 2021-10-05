@@ -443,6 +443,9 @@ public class SystemError {
 	public static final SystemError INVALID_COLOR_OR_SIZE = new SystemError("INVALID_COLOR_OR_SIZE", "Invalid color or size", "",
 			"http://developer.30usd.com/errors/400.html");
 
+	public static final SystemError INVALID_IOSS_NUMBER = new SystemError("INVALID_IOSS_NUMBER", "Invalid IOSS number", "",
+			"http://developer.30usd.com/errors/400.html");
+
 	public int getCode() {
 		return code;
 	}

@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import asia.leadsgen.psp.obj.DropshipOrderProductTypeObj;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang.StringUtils;
 
@@ -86,6 +87,13 @@ public class DropshipOrderUpdateV2Handler extends PSPOrderHandler implements Han
 							throw new BadRequestException(SystemError.DUPLICATE_REFERENCE_ORDER);
 						}
 					}
+				}
+
+				String iossNumber = ParamUtil.getString(requestOrderInfoMap, AppParams.IOSS_NUMBER);
+				Boolean isValidIossNumber = OrderUtil.checkValidIossNumber(iossNumber);
+
+				if (!isValidIossNumber) {
+					throw new BadRequestException(SystemError.INVALID_IOSS_NUMBER);
 				}
 							
 				String dbOrderState = ParamUtil.getString(dbOrderInfoMap, AppParams.STATE);
@@ -192,10 +200,10 @@ public class DropshipOrderUpdateV2Handler extends PSPOrderHandler implements Han
 							String itemId = ParamUtil.getString(requestItem, AppParams.ID);
 							if (StringUtils.isEmpty(itemId)) {
 								LOGGER.info("itemId is Empty... ");
-								orderItem = createOrderItem(orderId, requestItem, orderCurrency, shippingMethod, shippingInfo, countryTax);
+								orderItem = createOrderItem(orderId, requestItem, orderCurrency, shippingMethod, shippingInfo, countryTax, iossNumber);
 							} else {
 								LOGGER.info("itemId= " + itemId);
-								orderItem = updateOrderItem(requestItem, shippingMethod, shippingInfo, countryTax);
+								orderItem = updateOrderItem(requestItem, shippingMethod, shippingInfo, countryTax, iossNumber);
 							}
 							LOGGER.info("orderItem: " + orderItem.toString());
 							orderAmount += GetterUtil.getDouble(ParamUtil.getString(orderItem, AppParams.AMOUNT));;
@@ -211,8 +219,10 @@ public class DropshipOrderUpdateV2Handler extends PSPOrderHandler implements Han
 					
 					DropshipOrderProductService.updateShippingMethod(orderId, shippingMethod);
 					NumberFormat amountFormatter = new DecimalFormat("#0.00");
+
 					dbOrderInfoMap = DropshipOrderService.updateOrderV2(orderId, amountFormatter.format(orderAmount),
-							orderCurrency, "", shippingId, storeId, referenceOrderId, totalItems, isAddrVerified, addrVerifiedNote, totalTax.toString(), totalShippingFee);
+							orderCurrency, "", shippingId, storeId, referenceOrderId, totalItems, isAddrVerified, addrVerifiedNote, totalTax.toString(), totalShippingFee, iossNumber);
+
 
 					routingContext.put(AppParams.RESPONSE_CODE, HttpResponseStatus.OK.code());
 					routingContext.put(AppParams.RESPONSE_MSG, HttpResponseStatus.OK.reasonPhrase());
@@ -306,7 +316,7 @@ public class DropshipOrderUpdateV2Handler extends PSPOrderHandler implements Han
 				postalCode, countryCode, countryName, false);
 	}
 
-	private Map createOrderItem(String orderId, Map requestItem, String currency, String shippingMethod, Map shippingInfo, Map countryTax)
+	private Map createOrderItem(String orderId, Map requestItem, String currency, String shippingMethod, Map shippingInfo, Map countryTax, String iossNumber)
 			throws SQLException {
 		
 		LOGGER.info("requestItem= " + requestItem.toString());
@@ -362,23 +372,27 @@ public class DropshipOrderUpdateV2Handler extends PSPOrderHandler implements Han
 
 		double productAmount = GetterUtil.format(baseCost * quantity + shippingFee, 2);
 		LOGGER.info("+++productAmount = " + productAmount);
-		Double taxAmount = OrderUtil.getTaxByAmountAndByCountry(productAmount,countryTax);
+		Double taxAmount =0d;
+		if (StringUtils.isEmpty(iossNumber)) {
+			taxAmount = OrderUtil.getTaxByAmountAndByCountry(productAmount, countryTax);
+		}
 		productAmount = GetterUtil.format(productAmount + taxAmount, 2);
 		LOGGER.info("+++taxAmount = " + taxAmount);
 
-		DropshipOrderProductObj orderProductObj = new DropshipOrderProductObj.Builder(orderId)
+		DropshipOrderProductTypeObj orderProductObj = DropshipOrderProductTypeObj.builder()
+				.orderId(orderId)
 				.campaignId(campaignId)
 				.productId(productId)
 				.variantId(variantId)
 				.sizeId(sizeId)
-				.price(baseCost)
-				.shippingFee(shippingFee)
+				.price(String.valueOf(baseCost))
+				.shippingFee(String.valueOf(shippingFee))
 				.currency(currency)
 				.quantity(quantity)
 				.state(ResourceStates.APPROVED)
 				.variantName(variantName)
-				.amount(productAmount)
-				.baseCost(baseCost)
+				.amount(String.valueOf(productAmount))
+				.baseCost(String.valueOf(baseCost))
 				.baseId(baseId)
 //				.lineItemId(setLineItemId)
 				.variantFrontUrl(variantFrontUrl)
@@ -394,21 +408,20 @@ public class DropshipOrderUpdateV2Handler extends PSPOrderHandler implements Han
 //				.partnerProperties(setPartnerProperties)
 //				.partnerOption(setPartnerOption)
 				.unitAmount(unitAmount)
-				.baseShortCode(baseShortCode)
 				.designFrontUrl(designFrontUrl)
 				.designBackUrl(designBackUrl)
-				.taxAmount(taxAmount)
+				.taxAmount(String.valueOf(taxAmount))
 				.build();
 
 		LOGGER.info("orderProductObj: " + orderProductObj.toString());
-		Map orderItem = DropshipOrderProductService.insertDropshipOrderProduct(orderProductObj);
+		Map orderItem = DropshipOrderProductService.insertDropshipOrderProductV2(orderProductObj);
 
 //		Map orderItem = DropshipOrderProductService.insertV2(orderProductObj);
 
 		return orderItem;
 	}
 
-	private Map updateOrderItem(Map requestItem, String shippingMethod, Map shippingInfo, Map countryTax) throws SQLException {
+	private Map updateOrderItem(Map requestItem, String shippingMethod, Map shippingInfo, Map countryTax, String iossNumber) throws SQLException {
 		
 		LOGGER.info("updateOrderItem... ");
 		LOGGER.info("requestItem= " + requestItem.toString());
@@ -433,7 +446,10 @@ public class DropshipOrderUpdateV2Handler extends PSPOrderHandler implements Han
 
 		double productAmount = GetterUtil.format(baseCost * quantity + shippingFee, 2);
 		LOGGER.info("+++productAmount = " + productAmount);
-		Double taxAmount = OrderUtil.getTaxByAmountAndByCountry(productAmount,countryTax);
+		Double taxAmount =0d;
+		if (StringUtils.isEmpty(iossNumber)) {
+			taxAmount = OrderUtil.getTaxByAmountAndByCountry(productAmount, countryTax);
+		}
 		productAmount = GetterUtil.format(productAmount + taxAmount, 2);
 		LOGGER.info("+++taxAmount = " + taxAmount);
 		

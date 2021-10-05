@@ -30,6 +30,11 @@ public class PartnerConst {
 	public static final String CANVAS_CHAMP_NAME = "Canvas Champ";
 
 	public static final String LEE_COW_LEATHER = "bFa4kEWa0OfdRphH";
+	public static final String ROSALINDA = "H4Qah6MbqrkxPFTH";
+	public static final String XUFA = "dmecJW82hZNDax7Q";
+	
+	public static final String TIANLONG = "usN4tNx2JHMg0PwH";
+	public static final String DISTRICPHOTO = "z0VPCsGjrPopUIX7";
 
 	private static String champyBases;
 

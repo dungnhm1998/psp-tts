@@ -1,6 +1,8 @@
 package asia.leadsgen.psp.service_fulfill;
 
 import java.lang.reflect.InvocationTargetException;
+import java.sql.CallableStatement;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -8,16 +10,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 import javax.sql.DataSource;
 
-import org.apache.commons.collections4.map.HashedMap;
+import org.apache.commons.collections4.CollectionUtils;
 
 import asia.leadsgen.psp.exception.OracleException;
 import asia.leadsgen.psp.obj.CMSCreateLabelResult;
 import asia.leadsgen.psp.obj.Fulfillment;
 import asia.leadsgen.psp.obj.FulfillmentDetail;
+import asia.leadsgen.psp.obj.FulfillmentDetailObj;
+import asia.leadsgen.psp.obj.FulfillmentObj;
 import asia.leadsgen.psp.obj.PartnerObj;
 import asia.leadsgen.psp.obj.Shipping;
 import asia.leadsgen.psp.util.AppParams;
@@ -26,6 +29,7 @@ import asia.leadsgen.psp.util.DBProcedureUtil;
 import asia.leadsgen.psp.util.ParamUtil;
 import asia.leadsgen.psp.util.ResourceStates;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import oracle.jdbc.OracleConnection;
 import oracle.jdbc.OracleTypes;
 import oracle.jdbc.driver.OracleSQLException;
 
@@ -38,7 +42,11 @@ public class FulfillmentService {
 	}
 	
 	static final String FF_DETAIL_GET_ORDERS_ROSALINDA = "{call PKG_FF_FULFILLMENT_DETAIL.rosalinda_get_orders(?,?,?,?,?,?,?,?)}";
-
+	public static final String FULFILL_SCHEDULER_ASSIGN_PRODUCTS_TO_PARTNER = "{call PKG_FULFILL_SCHEDULER.assign_products_to_partner(?,?,?,?,?)}";
+	private static final String INSERT_FULFILLMENT = "{call PKG_FULFILLMENT_NEW.insert_fulfillment(?)}";
+	private static final String UPDATE_PRINT_URL_AND_SKU_AND_COST = "{call PKG_FULFILLMENT_NEW.update_print_url_and_sku_and_cost(?)}";
+	
+	
 	public static Map searchByOrderId(String orderId) throws SQLException {
 
 		Map inputParams;
@@ -541,7 +549,70 @@ public class FulfillmentService {
 
 		return resultDataList;
 	}
+	
+	public static String assignItemToPartner(FulfillmentDetailObj item) throws SQLException {
+		LOGGER.info(">>>>> assignItemToPartner item " + item.toString());
+		
+		Map inputParams = new LinkedHashMap<Integer, String>();
+		inputParams.put(1, item.getPartnerId());
+		inputParams.put(2, item.getId());
+		
+		Map<Integer, Integer> outputParamsTypes = new LinkedHashMap<>();
+		outputParamsTypes.put(3, OracleTypes.NUMBER);
+		outputParamsTypes.put(4, OracleTypes.VARCHAR);
+		outputParamsTypes.put(5, OracleTypes.CURSOR);
 
+		Map<Integer, String> outputParamsNames = new LinkedHashMap<>();
+		outputParamsNames.put(3, AppParams.RESULT_CODE);
+		outputParamsNames.put(4, AppParams.RESULT_MSG);
+		outputParamsNames.put(5, AppParams.RESULT_DATA);
+		
+		Map resultMap = DBProcedureUtil.execute(dataSource,FULFILL_SCHEDULER_ASSIGN_PRODUCTS_TO_PARTNER, inputParams, outputParamsTypes, outputParamsNames);
+		int resultCode = ParamUtil.getInt(resultMap, AppParams.RESULT_CODE);
+		if (resultCode != HttpResponseStatus.OK.code()) {
+			throw new OracleException(ParamUtil.getString(resultMap, AppParams.RESULT_MSG));
+		}
+
+		List<Map> resultDataList = ParamUtil.getListData(resultMap, AppParams.RESULT_DATA);
+
+		String packageId = null;
+		if (CollectionUtils.isNotEmpty(resultDataList)) {
+			packageId = ParamUtil.getString(resultDataList.get(0), AppParams.S_ID);
+		}
+		return packageId;
+	}
+	
+	public static void insertFulfillment(List<FulfillmentObj> items){
+		LOGGER.info("insertFulfillment " + items.size() + " items");
+		try (Connection hikariCon = dataSource.getConnection()) {
+			if (hikariCon.isWrapperFor(OracleConnection.class)) {
+				OracleConnection con = hikariCon.unwrap(OracleConnection.class);
+				FulfillmentObj[] arr = new FulfillmentObj[items.size()];
+				arr = items.toArray(arr);
+				java.sql.Array orclArr = con.createOracleArray("FULFILLMENT_TYPE_T", arr);
+				CallableStatement cstmt = con.prepareCall(INSERT_FULFILLMENT);
+				cstmt.setArray(1, orclArr);
+				cstmt.execute();
+			}
+		} catch (Exception e) {
+			LOGGER.severe("insertFulfillment Error " + e.getMessage());
+		}
+	}
+	
+	public static void updatePrintUrlAndSkuAndCost(List<FulfillmentDetailObj> items) throws SQLException {
+		try (Connection hikariCon = dataSource.getConnection()) {
+			if (hikariCon.isWrapperFor(OracleConnection.class)) {
+				OracleConnection con = hikariCon.unwrap(OracleConnection.class);
+				FulfillmentDetailObj[] arr = new FulfillmentDetailObj[items.size()];
+				arr = items.toArray(arr);
+				java.sql.Array orclArr = con.createOracleArray("FULFILLMENT_DETAIL_TYPE_T", arr);
+				CallableStatement cstmt = con.prepareCall(UPDATE_PRINT_URL_AND_SKU_AND_COST);
+				cstmt.setArray(1, orclArr);
+				cstmt.execute();
+			}
+		}
+	}
+	
 	private static final Logger LOGGER = Logger.getLogger(FulfillmentService.class.getName());
 
 }

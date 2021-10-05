@@ -50,7 +50,7 @@ public class ShippingFeeObj {
 
 	@Override
 	public String toString() {
-		return "DropshipOrderProductTypeObj"
+		return "ShippingFeeObj"
 				+ " [id=" + id
 				+ ", baseId=" + baseId
 				+ ", baseName=" + baseName

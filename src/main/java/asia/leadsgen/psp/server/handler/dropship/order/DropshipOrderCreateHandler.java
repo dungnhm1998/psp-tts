@@ -128,7 +128,7 @@ public class DropshipOrderCreateHandler extends PSPOrderHandler implements Handl
 			String productId = ParamUtil.getString(firstItems, AppParams.PRODUCT_ID);
 			Map productInfoMap = ProductService.get(productId, true, false, false, false);
 			Map base = ParamUtil.getMapData(productInfoMap, AppParams.BASE);
-			String baseShortCode = ParamUtil.getString(base, AppParams.BASE_SHORT_CODE);
+			String baseShortCode = ParamUtil.getString(base, AppParams.SHORT_CODE);
 			prefix.append(campaignId).append(StringPool.DASH).append(baseShortCode);
 		}
 		return prefix.toString();
@@ -156,7 +156,7 @@ public class DropshipOrderCreateHandler extends PSPOrderHandler implements Handl
 		}
 
 		Map orderInfoMap = DropshipOrderService.updateOrderV2(orderId, orderAmountNumeric.toString(), orderCurrency,
-				ResourceStates.CREATED, StringPool.BLANK, "", "", totalItems, 0, "", totalTax.toString(), totalShippingFee);
+				ResourceStates.CREATED, StringPool.BLANK, "", "", totalItems, 0, "", totalTax.toString(), totalShippingFee, "");
 
 		orderInfoMap.put(AppParams.ITEMS, orderItemList);
 
@@ -172,7 +172,6 @@ public class DropshipOrderCreateHandler extends PSPOrderHandler implements Handl
 		String variantName = ParamUtil.getString(requestItem, AppParams.VARIANT_NAME);
 		String sizeId = ParamUtil.getString(requestItem, AppParams.SIZE_ID);
 		int quantity = ParamUtil.getInt(requestItem, AppParams.QUANTITY);
-
 
 		Map variantMap = ProductVariantService.getVariantMapByIdAndSizeId(variantId, sizeId);
 

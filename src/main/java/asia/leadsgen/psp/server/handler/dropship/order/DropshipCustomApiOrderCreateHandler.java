@@ -14,7 +14,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import asia.leadsgen.psp.obj.DropshipOrderProductTypeObj;
+import asia.leadsgen.psp.obj.DropshipOrderTypeObj;
 import asia.leadsgen.psp.service_fulfill.BaseService;
+import asia.leadsgen.psp.service_fulfill.DropshipOrderServiceV2;
 import asia.leadsgen.psp.util.OrderUtil;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
@@ -129,7 +132,9 @@ public class DropshipCustomApiOrderCreateHandler extends PSPOrderHandler impleme
 				String firstItemBaseShortCode = "";
 				if (response.getSuccess() && CollectionUtils.isEmpty(orderRequest.getItems())) {
 					response = new Response(false, "Order items can not be empty.", 400);
-				} else if (response.getSuccess()) {
+				}else if (!OrderUtil.checkValidIossNumber(orderRequest.getIossNumber())) {
+					response = new Response(false, "Invalid IOSS number", 400);
+				}  else if (response.getSuccess()) {
 					for (int i = 0; i < orderRequest.getItems().size(); i++) {
 
 						DropshipCustomApiItem orderItem = orderRequest.getItems().get(i);
@@ -404,21 +409,23 @@ public class DropshipCustomApiOrderCreateHandler extends PSPOrderHandler impleme
 
 		String orderIdPrefix = String.format("%s-%s", store.getUserId(), firstItemBaseShortCode);
 
-		DropshipOrderObj dropshipOrder = new DropshipOrderObj.Builder(orderIdPrefix)
-				.orderCurrency("USD")
+		DropshipOrderTypeObj dropshipOrder = DropshipOrderTypeObj.builder()
+				.idPrefix(orderIdPrefix)
+				.currency("USD")
 				.state(ResourceStates.QUEUED)
 				.shippingId(shippingId)
-				.trackingNumber(AppUtil.generateOrderTrackingNumber())
+				.trackingCode(AppUtil.generateOrderTrackingNumber())
 				.channel("api")
 				.storeId(store.getId())
 				.userId(store.getUserId())
 				.note(orderRequest.getApiKey())
-				.referenceOrderId(orderRequest.getReferenceOrderId())
+				.referenceOrder(orderRequest.getReferenceOrderId())
 				.source(ResourceSource.CUSTOM_API)
 				.minifiedJson(new Gson().toJson(orderRequest))
+				.iossNumber(orderRequest.getIossNumber())
 				.build();
 
-		Map savedOrder = DropshipOrderService.insertDropshipOrder(dropshipOrder);
+		Map savedOrder = DropshipOrderServiceV2.insertDropshipOrderV2(dropshipOrder);
 		String savedOrderId = ParamUtil.getString(savedOrder, AppParams.ID);
 
 		initItemGroupQuantity();
@@ -433,8 +440,8 @@ public class DropshipCustomApiOrderCreateHandler extends PSPOrderHandler impleme
 		Map shippingInfo = ProductUtil.getShippingInfoForListItems(setBaseId, orderRequest.getShippingCountry(), AppParams.STANDARD);
 
 		Map countryTax = CountryTaxService.getTaxByCountry(orderRequest.getShippingCountry());
-		
-		Double totalTax = 0d; 
+
+		Double totalTax = 0d;
 		
 		for (DropshipCustomApiItem item : orderRequest.getItems()) {
 			DropshipBaseSkuObj baseSku = DropshipBaseSkuService.getBySku(item.getSku());
@@ -452,24 +459,27 @@ public class DropshipCustomApiOrderCreateHandler extends PSPOrderHandler impleme
 			double productSubTotal = baseCost * item.getQuantity();
 			double productTotal = GetterUtil.format(productSubTotal + shippingFee, 2);
 			LOGGER.info("+++productTotal = " + productTotal);
-			Double taxAmount = OrderUtil.getTaxByAmountAndByCountry(productTotal,countryTax);
+			Double taxAmount =0d;
+			if (StringUtils.isEmpty(orderRequest.getIossNumber())) {
+				taxAmount = OrderUtil.getTaxByAmountAndByCountry(productTotal, countryTax);
+			}
 			productTotal = GetterUtil.format(productTotal + taxAmount, 2);
 			LOGGER.info("+++taxAmount = " + taxAmount);
 
-			DropshipOrderProductObj dropshipOrderProduct = new DropshipOrderProductObj.Builder(savedOrderId)
+			DropshipOrderProductTypeObj dropshipOrderProduct = DropshipOrderProductTypeObj.builder()
 					.orderId(savedOrderId)
 					.campaignId(item.getMd5CampaignId())
 					.productId("")// -------------------------------------ProductId
 					.variantId("")// -------------------------------------VariantId
 					.sizeId(baseSku.getSizeId())
-					.price(baseSku.getPrice())
-					.shippingFee(shippingFee)
+					.price(String.valueOf(baseSku.getPrice()))
+					.shippingFee(String.valueOf(shippingFee))
 					.currency("USD")
 					.quantity(item.getQuantity())
 					.state(ResourceStates.APPROVED)
 					.variantName(baseSku.getBaseName() + " - " + baseSku.getColorName())
-					.amount(productTotal)
-					.baseCost(baseCost)
+					.amount(String.valueOf(productTotal))
+					.baseCost(String.valueOf(baseCost))
 					.baseId(baseSku.getBaseId())
 					.lineItemId(referenceOrderId)
 					.variantFrontUrl(item.getMockupUrlFront())
@@ -484,10 +494,10 @@ public class DropshipCustomApiOrderCreateHandler extends PSPOrderHandler impleme
 					.itemType(ResourceStates.NORMAL)// -------------------------------------ItemType
 //					.partnerProperties(partnerProperties.toString())
 //					.partnerOption(partnerOption.toString())
-					.taxAmount(taxAmount)
+					.taxAmount(String.valueOf(taxAmount))
 					.build();
 
-			DropshipOrderProductService.insertDropshipOrderProduct(dropshipOrderProduct);
+			DropshipOrderProductService.insertDropshipOrderProductV2(dropshipOrderProduct);
 
 			orderTotal += productTotal;
 			orderSubTotal += productSubTotal;

@@ -31,6 +31,7 @@ public class DropshipOrderObj {
 	private String originalId;
 	private String shippingMethod;
 	private double taxAmount = 0.00d;
+	private String iossNumber;
 
 	public DropshipOrderObj() {
 		super();
@@ -40,7 +41,7 @@ public class DropshipOrderObj {
 							String trackingNumber, String note, String channel, String storeId, String userId,
 							String referenceOrderId, double orderAmount, double subAmount, double shippingFee,
 							int totalItems, int addrVerified, String minifiedJson, String source, String substate,
-							String originalId, String shippingMethod, double taxAmount) {
+							String originalId, String shippingMethod, double taxAmount, String iossNumber) {
 		this.orderIdPrefix = orderIdPrefix;
 		this.orderCurrency = orderCurrency;
 		this.state = state;
@@ -62,6 +63,7 @@ public class DropshipOrderObj {
 		this.originalId = originalId;
 		this.shippingMethod = shippingMethod;
 		this.taxAmount = taxAmount;
+		this.iossNumber = iossNumber;
 	}
 
 	public static class Builder {
@@ -86,6 +88,7 @@ public class DropshipOrderObj {
 		private String originalId;
 		private String shippingMethod;
 		private double taxAmount = 0.00d;
+		private String iossNumber;
 
 		public Builder(String orderIdPrefix) {
 			this.orderIdPrefix = orderIdPrefix;
@@ -191,11 +194,16 @@ public class DropshipOrderObj {
 			return this;
 		}
 
+		public Builder iossNumber(String iossNumber) {
+			this.iossNumber = iossNumber;
+			return this;
+		}
+
 		public DropshipOrderObj build() {
 			return new DropshipOrderObj(this.orderIdPrefix, this.orderCurrency, this.state, this.shippingId,
 					this.trackingNumber, this.note, this.channel, this.storeId, this.userId, this.referenceOrderId,
 					this.orderAmount, this.subAmount, this.shippingFee, this.totalItems, this.addrVerified,
-					this.minifiedJson, this.source, this.substate, this.originalId, this.shippingMethod, this.taxAmount);
+					this.minifiedJson, this.source, this.substate, this.originalId, this.shippingMethod, this.taxAmount, this.iossNumber);
 		}
 
 	}
@@ -208,6 +216,6 @@ public class DropshipOrderObj {
 				+ referenceOrderId + ", orderAmount=" + orderAmount + ", subAmount=" + subAmount + ", shippingFee="
 				+ shippingFee + ", totalItems=" + totalItems + ", addrVerified=" + addrVerified + ", minifiedJson="
 				+ minifiedJson + ", source=" + source + ", substate=" + substate + ", originalId=" + originalId
-				+ ", shippingMethod=" + shippingMethod + ", taxAmount=" + taxAmount + "]";
+				+ ", shippingMethod=" + shippingMethod + ", taxAmount=" + taxAmount + ", iossNumber=" + iossNumber + "]";
 	}
 }

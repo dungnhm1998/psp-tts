@@ -1,7 +1,13 @@
 package asia.leadsgen.psp.service_fulfill;
 
+import java.sql.CallableStatement;
+import java.sql.Clob;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -9,6 +15,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import asia.leadsgen.psp.obj.DropshipOrderProductTypeObj;
+import oracle.jdbc.OracleConnection;
+import oracle.sql.TIMESTAMP;
 import org.apache.commons.lang.StringUtils;
 
 import asia.leadsgen.psp.error.SystemError;
@@ -20,8 +29,8 @@ import asia.leadsgen.psp.util.ParamUtil;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import oracle.jdbc.OracleTypes;
 
-public class DropshipOrderProductService extends  MasterService{
-	
+public class DropshipOrderProductService extends MasterService {
+
 	static final String DROPSHIP_ORDER_PRODUCT_INSERT = "{call PKG_FF_DROPSHIP_ORDER_PRODUCT.dropship_order_product_insert(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)}";
 	static final String DROPSHIP_ORDER_PRD_UPDATE = "{call PKG_FF_DROPSHIP_ORDER_PRODUCT.order_prd_update(?,?,?,?,?,?,?,?,?,?,?,?,?)}";
 	static final String DROPSHIP_ORDER_PRD_UPDATE_BY_PREDEFINED_SKU = "{call PKG_FF_DROPSHIP_ORDER_PRODUCT.order_prd_update_by_predefined_sku(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)}";
@@ -35,45 +44,47 @@ public class DropshipOrderProductService extends  MasterService{
 	static final String UPDATE_ETSY_ORDER = "{call pkg_dropship_order_product.update_etsy_order(?,?,?,?,?,?,?,?)}";
 	static final String INSERT_PRODUCT = "{call pkg_dropship_order_product.insert_etsy_product(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)}";
 
+	static final String DROPSHIP_ORDER_PRODUCT_INSERT_V2 = "{call PKG_FF_DROPSHIP_ORDER_PRODUCT.dropship_order_product_insert_v2(?,?,?,?)}";
+
 	public static Map insertDropshipOrderProduct(DropshipOrderProductObj dropshipOrderProduct) throws SQLException {
 
 		LOGGER.info("Inserting dropship order product " + dropshipOrderProduct.toString());
 		Map inputParams = new LinkedHashMap<Integer, DropshipOrderProductObj>();
 
 //		inputParams.put(index++, dropshipOrderProduct.getId());
-		inputParams.put(1,dropshipOrderProduct.getOrderId());
-		inputParams.put(2,dropshipOrderProduct.getCampaignId());
-		inputParams.put(3,dropshipOrderProduct.getProductId());
-		inputParams.put(4,dropshipOrderProduct.getVariantId());
-		inputParams.put(5,dropshipOrderProduct.getSizeId());
-		inputParams.put(6,dropshipOrderProduct.getPrice());
-		inputParams.put(7,dropshipOrderProduct.getShippingFee());
-		inputParams.put(8,dropshipOrderProduct.getCurrency());
-		inputParams.put(9,dropshipOrderProduct.getQuantity());
-		inputParams.put(10,dropshipOrderProduct.getState());
-		inputParams.put(11,dropshipOrderProduct.getVariantName());
-		inputParams.put(12,dropshipOrderProduct.getAmount());
-		inputParams.put(13,dropshipOrderProduct.getBaseCost());
-		inputParams.put(14,dropshipOrderProduct.getBaseId());
-		inputParams.put(15,dropshipOrderProduct.getLineItemId());
-		inputParams.put(16,dropshipOrderProduct.getVariantFrontUrl());
-		inputParams.put(17,dropshipOrderProduct.getVariantBackUrl());
-		inputParams.put(18,dropshipOrderProduct.getColorId());
-		inputParams.put(19,dropshipOrderProduct.getColorValue());
-		inputParams.put(20,dropshipOrderProduct.getPartnerSku());
-		inputParams.put(21,dropshipOrderProduct.getColorName());
-		inputParams.put(22,dropshipOrderProduct.getSizeName());
-		inputParams.put(23,dropshipOrderProduct.getShippingMethod());
-		inputParams.put(24,dropshipOrderProduct.getPrintDetail());
-		inputParams.put(25,dropshipOrderProduct.getItemType());
-		inputParams.put(26,dropshipOrderProduct.getPartnerProperties());
-		inputParams.put(27,dropshipOrderProduct.getPartnerOption());
-		inputParams.put(28,dropshipOrderProduct.getBaseShortCode());
-		inputParams.put(29,dropshipOrderProduct.getDesignFrontUrl());
-		inputParams.put(30,dropshipOrderProduct.getDesignBackUrl());
-		inputParams.put(31,dropshipOrderProduct.getUnitAmount());
-		inputParams.put(32,dropshipOrderProduct.getTax());
-		inputParams.put(33,dropshipOrderProduct.getTaxAmount());
+		inputParams.put(1, dropshipOrderProduct.getOrderId());
+		inputParams.put(2, dropshipOrderProduct.getCampaignId());
+		inputParams.put(3, dropshipOrderProduct.getProductId());
+		inputParams.put(4, dropshipOrderProduct.getVariantId());
+		inputParams.put(5, dropshipOrderProduct.getSizeId());
+		inputParams.put(6, dropshipOrderProduct.getPrice());
+		inputParams.put(7, dropshipOrderProduct.getShippingFee());
+		inputParams.put(8, dropshipOrderProduct.getCurrency());
+		inputParams.put(9, dropshipOrderProduct.getQuantity());
+		inputParams.put(10, dropshipOrderProduct.getState());
+		inputParams.put(11, dropshipOrderProduct.getVariantName());
+		inputParams.put(12, dropshipOrderProduct.getAmount());
+		inputParams.put(13, dropshipOrderProduct.getBaseCost());
+		inputParams.put(14, dropshipOrderProduct.getBaseId());
+		inputParams.put(15, dropshipOrderProduct.getLineItemId());
+		inputParams.put(16, dropshipOrderProduct.getVariantFrontUrl());
+		inputParams.put(17, dropshipOrderProduct.getVariantBackUrl());
+		inputParams.put(18, dropshipOrderProduct.getColorId());
+		inputParams.put(19, dropshipOrderProduct.getColorValue());
+		inputParams.put(20, dropshipOrderProduct.getPartnerSku());
+		inputParams.put(21, dropshipOrderProduct.getColorName());
+		inputParams.put(22, dropshipOrderProduct.getSizeName());
+		inputParams.put(23, dropshipOrderProduct.getShippingMethod());
+		inputParams.put(24, dropshipOrderProduct.getPrintDetail());
+		inputParams.put(25, dropshipOrderProduct.getItemType());
+		inputParams.put(26, dropshipOrderProduct.getPartnerProperties());
+		inputParams.put(27, dropshipOrderProduct.getPartnerOption());
+		inputParams.put(28, dropshipOrderProduct.getBaseShortCode());
+		inputParams.put(29, dropshipOrderProduct.getDesignFrontUrl());
+		inputParams.put(30, dropshipOrderProduct.getDesignBackUrl());
+		inputParams.put(31, dropshipOrderProduct.getUnitAmount());
+		inputParams.put(32, dropshipOrderProduct.getTax());
+		inputParams.put(33, dropshipOrderProduct.getTaxAmount());
 
 		Map<Integer, Integer> outputParamsTypes = new LinkedHashMap<>();
 		outputParamsTypes.put(34, OracleTypes.NUMBER);
@@ -107,7 +118,7 @@ public class DropshipOrderProductService extends  MasterService{
 
 		return resultMap;
 	}
-	
+
 	public static Map update(DropshipOrderProductObj obj) throws SQLException {
 
 		LOGGER.info("Updating dropship order product " + obj.toString());
@@ -155,7 +166,7 @@ public class DropshipOrderProductService extends  MasterService{
 
 		return resultMap;
 	}
-	
+
 	public static Map updateByPredefinedSku(DropshipOrderProductObj dropshipOrderProduct) throws SQLException {
 		Map resultMap = null;
 		try {
@@ -196,7 +207,7 @@ public class DropshipOrderProductService extends  MasterService{
 			LOGGER.info("=>Dropship Order product update result: 3");
 
 
-			Map insertResultMap = DBProcedureUtil.execute(dataSource, DROPSHIP_ORDER_PRD_UPDATE_BY_PREDEFINED_SKU, 
+			Map insertResultMap = DBProcedureUtil.execute(dataSource, DROPSHIP_ORDER_PRD_UPDATE_BY_PREDEFINED_SKU,
 					inputParams, outputParamsTypes, outputParamsNames);
 			LOGGER.info("=>Dropship Order product update result: 4");
 			int resultCode = ParamUtil.getInt(insertResultMap, AppParams.RESULT_CODE);
@@ -222,7 +233,7 @@ public class DropshipOrderProductService extends  MasterService{
 
 		return resultMap;
 	}
-	
+
 	public static void deleteByOrder(String orderId) throws SQLException {
 
 		LOGGER.info("Dropship Delete order products with orderId=: " + orderId);
@@ -249,7 +260,7 @@ public class DropshipOrderProductService extends  MasterService{
 
 		LOGGER.info("=>Dropship Order products delete result: " + resultCode);
 	}
-	
+
 	public static void deleteByOrderCSVImport(String orderId) throws SQLException {
 
 		LOGGER.info("Dropship Delete order products with orderId=: " + orderId);
@@ -276,7 +287,7 @@ public class DropshipOrderProductService extends  MasterService{
 
 		LOGGER.info("=>Dropship Order products delete result: " + resultCode);
 	}
-	
+
 	public static void deleteOrderItem(String id) throws SQLException {
 
 		LOGGER.info("Dropship Delete order products with Id=: " + id);
@@ -303,21 +314,21 @@ public class DropshipOrderProductService extends  MasterService{
 
 		LOGGER.info("=>Dropship Order products delete result: " + resultCode);
 	}
-	
+
 	public static void updateShippingMethod(String orderId, String method) throws SQLException {
-		
+
 		Map inputParams = new LinkedHashMap<Integer, String>();
 		inputParams.put(1, orderId);
 		inputParams.put(2, method);
-		
+
 		Map<Integer, Integer> outputParamsTypes = new LinkedHashMap<>();
 		outputParamsTypes.put(3, OracleTypes.NUMBER);
 		outputParamsTypes.put(4, OracleTypes.VARCHAR);
-		
+
 		Map<Integer, String> outputParamsNames = new LinkedHashMap<>();
 		outputParamsNames.put(3, AppParams.RESULT_CODE);
 		outputParamsNames.put(4, AppParams.RESULT_MSG);
-		
+
 		Map updateResultMap = DBProcedureUtil.execute(dataSource, DROPSHIP_ORDER_UPDATE_SHIPPING_METHOD,
 				inputParams, outputParamsTypes, outputParamsNames);
 
@@ -327,7 +338,7 @@ public class DropshipOrderProductService extends  MasterService{
 			throw new OracleException(ParamUtil.getString(updateResultMap, AppParams.RESULT_MSG));
 		}
 	}
-	
+
 	public static Map getById(String id) throws SQLException {
 
 		LOGGER.info("Get dropship order product by id=" + id);
@@ -365,7 +376,7 @@ public class DropshipOrderProductService extends  MasterService{
 
 		return resultMap;
 	}
-	
+
 	private static Map formatDropshipOrderProduct(Map queryData) throws SQLException {
 
 		Map resultMap = new LinkedHashMap<>();
@@ -393,7 +404,7 @@ public class DropshipOrderProductService extends  MasterService{
 
 		return resultMap;
 	}
-	
+
 	public static Map search(String orderId, String state) throws SQLException {
 
 		LOGGER.info("Order item search with orderId=" + orderId + ", state=" + state);
@@ -431,7 +442,7 @@ public class DropshipOrderProductService extends  MasterService{
 		Set<String> setOrderProductId = new HashSet<>();
 		for (Map resultDataMap : resultDataList) {
 			String id = ParamUtil.getString(resultDataMap, AppParams.S_ID);
-			if(!setOrderProductId.contains(id)) {
+			if (!setOrderProductId.contains(id)) {
 				dataList.add(format3(resultDataMap));
 				setOrderProductId.add(id);
 			}
@@ -446,7 +457,7 @@ public class DropshipOrderProductService extends  MasterService{
 
 		return resultMap;
 	}
-	
+
 	private static Map format3(Map queryData) throws SQLException {
 
 		Map resultMap = new LinkedHashMap<>();
@@ -486,7 +497,7 @@ public class DropshipOrderProductService extends  MasterService{
 
 		boolean backView = ParamUtil.getBoolean(queryData, AppParams.N_BACK_VIEW);
 
-		String variantImageUrl = backView ? ParamUtil.getString(queryData, AppParams.S_BACK_IMG_URL) : ParamUtil.getString(queryData, AppParams.S_FRONT_IMG_URL);
+		String variantImageUrl = backView ? ParamUtil.getString(queryData, AppParams.S_BACK_IMG_URL):ParamUtil.getString(queryData, AppParams.S_FRONT_IMG_URL);
 
 		resultMap.put(AppParams.VARIANT_IMAGE, variantImageUrl);
 		resultMap.put(AppParams.PRICE, ParamUtil.getString(queryData, AppParams.S_PRICE));
@@ -495,7 +506,7 @@ public class DropshipOrderProductService extends  MasterService{
 		resultMap.put(AppParams.SHIPPING_FEE, ParamUtil.getString(queryData, AppParams.S_SHIPPING_FEE));
 		resultMap.put(AppParams.AMOUNT, ParamUtil.getString(queryData, AppParams.S_AMOUNT));
 		resultMap.put(AppParams.STATE, ParamUtil.getString(queryData, AppParams.S_PRODUCT_STATE));
-		
+
 		resultMap.put(AppParams.BASE_COST, ParamUtil.getString(queryData, AppParams.S_BASE_COST));
 		resultMap.put(AppParams.LINE_ITEM_ID, ParamUtil.getString(queryData, AppParams.S_LINE_ITEM_ID));
 		resultMap.put(AppParams.SHIPPING_METHOD, ParamUtil.getString(queryData, AppParams.S_SHIPPING_METHOD));
@@ -522,47 +533,47 @@ public class DropshipOrderProductService extends  MasterService{
 
 		Map brandMap = new LinkedHashMap<>();
 		String heat_press = ParamUtil.getString(queryData, AppParams.N_HEAT_PRESS);
-		if(StringUtils.isNotEmpty(heat_press)) {
+		if (StringUtils.isNotEmpty(heat_press)) {
 			Map heatPressMap = new LinkedHashMap<>();
 			heatPressMap.put(AppParams.TITLE, "Heat press");
 			heatPressMap.put(AppParams.TOTAL, heat_press);
 			brandMap.put(AppParams.HEAT_PRESS, heatPressMap);
 		}
-		
+
 		String brand_box = ParamUtil.getString(queryData, AppParams.N_BRAND_BOX);
-		if(StringUtils.isNotEmpty(brand_box)) {
+		if (StringUtils.isNotEmpty(brand_box)) {
 			Map brandBoxMap = new LinkedHashMap<>();
 			brandBoxMap.put(AppParams.TITLE, "Box with brand name");
 			brandBoxMap.put(AppParams.TOTAL, brand_box);
 			brandMap.put(AppParams.BRAND_BOX, brandBoxMap);
 		}
-		
+
 		String shipping_tag = ParamUtil.getString(queryData, AppParams.N_SHIPPING_TAG);
-		if(StringUtils.isNotEmpty(shipping_tag)) {
+		if (StringUtils.isNotEmpty(shipping_tag)) {
 			Map shippingTagMap = new LinkedHashMap<>();
 			shippingTagMap.put(AppParams.TITLE, "Shipping tag");
 			shippingTagMap.put(AppParams.TOTAL, shipping_tag);
 			brandMap.put(AppParams.SHIPPING_TAG, shippingTagMap);
-		
+
 		}
 		String thankyou_tag = ParamUtil.getString(queryData, AppParams.N_THANKYOU_TAG);
-		if(StringUtils.isNotEmpty(thankyou_tag)) {
+		if (StringUtils.isNotEmpty(thankyou_tag)) {
 			Map thankyouTagMap = new LinkedHashMap<>();
 			thankyouTagMap.put(AppParams.TITLE, "Thank you tag");
 			thankyouTagMap.put(AppParams.TOTAL, thankyou_tag);
 			brandMap.put(AppParams.THANKYOU_TAG, thankyouTagMap);
 		}
-		
+
 		String giftcard = ParamUtil.getString(queryData, AppParams.N_GIFTCARD);
-		if(StringUtils.isNotEmpty(giftcard)) {
+		if (StringUtils.isNotEmpty(giftcard)) {
 			Map giftcardMap = new LinkedHashMap<>();
 			giftcardMap.put(AppParams.TITLE, "Gift card");
 			giftcardMap.put(AppParams.TOTAL, giftcard);
 			brandMap.put(AppParams.GIFTCARD, giftcardMap);
 		}
-		
+
 		resultMap.put(AppParams.BRAND, brandMap);
-		
+
 		if (!ParamUtil.getString(queryData, AppParams.S_TRACKING_ID).isEmpty()) {
 			Map trackingInfoMap = new LinkedHashMap<>();
 			trackingInfoMap.put(AppParams.ID, ParamUtil.getString(queryData, AppParams.S_TRACKING_ID));
@@ -576,9 +587,9 @@ public class DropshipOrderProductService extends  MasterService{
 
 		return resultMap;
 	}
-	
-	public static Map getTopSellingProduct(String userId,String storeIds , String search, String startDate, String endDate , int page, int pageSize) throws SQLException {
-		LOGGER.info("getTopSellingProduct input userId = " + userId + ", storeIds = " + storeIds + ", startDate = " + startDate + " , endDate = " + endDate+ ", page= " + page + ", size = " + pageSize);
+
+	public static Map getTopSellingProduct(String userId, String storeIds, String search, String startDate, String endDate, int page, int pageSize) throws SQLException {
+		LOGGER.info("getTopSellingProduct input userId = " + userId + ", storeIds = " + storeIds + ", startDate = " + startDate + " , endDate = " + endDate + ", page= " + page + ", size = " + pageSize);
 		Map inputParams = new LinkedHashMap<Integer, String>();
 		inputParams.put(1, userId);
 		inputParams.put(2, storeIds);
@@ -587,19 +598,19 @@ public class DropshipOrderProductService extends  MasterService{
 		inputParams.put(5, endDate);
 		inputParams.put(6, page);
 		inputParams.put(7, pageSize);
-		
+
 		Map<Integer, Integer> outputParamsTypes = new LinkedHashMap<>();
 		outputParamsTypes.put(8, OracleTypes.NUMBER);
 		outputParamsTypes.put(9, OracleTypes.VARCHAR);
 		outputParamsTypes.put(10, OracleTypes.NUMBER);
 		outputParamsTypes.put(11, OracleTypes.CURSOR);
-		
+
 		Map<Integer, String> outputParamsNames = new LinkedHashMap<>();
 		outputParamsNames.put(8, AppParams.RESULT_CODE);
 		outputParamsNames.put(9, AppParams.RESULT_MSG);
 		outputParamsNames.put(10, AppParams.RESULT_TOTAL);
 		outputParamsNames.put(11, AppParams.RESULT_DATA);
-		
+
 		Map resultMap = DBProcedureUtil.execute(dataSource, GET_DROPSHIP_TOP_SELLING_PRODUCT,
 				inputParams, outputParamsTypes, outputParamsNames);
 
@@ -608,7 +619,7 @@ public class DropshipOrderProductService extends  MasterService{
 		if (resultCode != HttpResponseStatus.OK.code()) {
 			throw new OracleException(ParamUtil.getString(resultMap, AppParams.RESULT_MSG));
 		}
-		
+
 		List<Map> result = ParamUtil.getListData(resultMap, AppParams.RESULT_DATA);
 		return resultMap;
 	}
@@ -684,6 +695,111 @@ public class DropshipOrderProductService extends  MasterService{
 		if (resultCode != HttpResponseStatus.CREATED.code()) {
 			throw new OracleException(ParamUtil.getString(insertResultMap, AppParams.RESULT_MSG));
 		}
+
+	}
+
+	public static Map insertDropshipOrderProductV2(DropshipOrderProductTypeObj obj) throws SQLException {
+		logger.info("--insertDropshipOrderProductV2 start ");
+		Map resultMap = new HashMap();
+		try (Connection hikariCon = dataSource.getConnection()) {
+
+			if (hikariCon.isWrapperFor(OracleConnection.class)) {
+
+				OracleConnection con = hikariCon.unwrap(OracleConnection.class);
+				try (CallableStatement cstmt = con.prepareCall(DROPSHIP_ORDER_PRODUCT_INSERT_V2)) {
+
+					Clob partnerPropertiesClob = con.createClob();
+					partnerPropertiesClob.setString(1, obj.getPartnerProperties());
+					obj.setPartnerPropertiesClob(partnerPropertiesClob);
+
+					Clob partnerOptionClob = con.createClob();
+					partnerOptionClob.setString(1, obj.getPartnerOption());
+					obj.setPartnerOptionClob(partnerOptionClob);
+
+					Clob printDetailClob = con.createClob();
+					printDetailClob.setString(1, obj.getPrintDetail());
+					obj.setPrintDetailClob(printDetailClob);
+
+					Clob customDataClob = con.createClob();
+					customDataClob.setString(1, obj.getCustomData());
+					obj.setCustomDataClob(customDataClob);
+
+					cstmt.setObject(1, obj);
+
+					cstmt.registerOutParameter(2, OracleTypes.NUMBER);
+					cstmt.registerOutParameter(3, OracleTypes.VARCHAR);
+					cstmt.registerOutParameter(4, OracleTypes.CURSOR);
+
+					cstmt.execute();
+
+					Object code = cstmt.getObject(2);
+					Object message = cstmt.getObject(3);
+
+					resultMap.put(AppParams.RESULT_CODE, code);
+					resultMap.put(AppParams.RESULT_MSG, message);
+
+					try (ResultSet resultSet = (ResultSet) cstmt.getObject(4);) {
+
+						if (resultSet != null) {
+
+							List<Map<String, Object>> modelList = new ArrayList<>();
+
+							ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+
+							while (resultSet.next()) {
+
+								Map<String, Object> modelInfoMap = new LinkedHashMap<>();
+
+								for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+
+									Object value = resultSet.getObject(i);
+
+									if (value instanceof TIMESTAMP) {
+										value = new java.util.Date(((TIMESTAMP) value).timestampValue().getTime());
+									}
+
+									if (value instanceof Clob) {
+										Clob clob = resultSet.getClob(i);
+										value = clob.getSubString(1, (int) clob.length());
+									}
+
+									modelInfoMap.put(resultSetMetaData.getColumnName(i), value);
+								}
+
+								modelList.add(modelInfoMap);
+							}
+
+							resultMap.put(AppParams.RESULT_DATA, modelList);
+						}
+					}
+
+
+				} catch (Exception e) {
+					logger.severe("--CallableStatement error ");
+				}
+			}
+
+		} catch (Exception e) {
+			logger.severe("--Connection error ");
+		}
+
+		int resultCode = ParamUtil.getInt(resultMap, AppParams.RESULT_CODE);
+
+		if (resultCode != HttpResponseStatus.OK.code()) {
+			throw new OracleException(ParamUtil.getString(resultMap, AppParams.RESULT_MSG));
+		}
+
+		List<Map> resultDataList = ParamUtil.getListData(resultMap, AppParams.RESULT_DATA);
+
+		if (resultDataList.isEmpty()) {
+			throw new OracleException(ParamUtil.getString(resultMap, AppParams.RESULT_MSG, SystemError.DATA_NOT_FOUND.getName()));
+		}
+
+		Map resultData = format3(resultDataList.get(0));
+
+		LOGGER.info("=> insertDropshipOrderProductV2 result: " + resultData.toString());
+
+		return resultData;
 
 	}
 

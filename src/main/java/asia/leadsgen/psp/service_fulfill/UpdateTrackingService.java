@@ -66,8 +66,14 @@ public class UpdateTrackingService {
 					String decodeStr = new String(decode);
 					JsonObject jsonToken = new JsonObject(decodeStr);
 					LOGGER.info("TOKEN INFO " + jsonToken.toString());
+
+					String apiKey = getMd5("H4Qah6MbqrkxPFTH"+domain);
+					String apiKey2= getMd5("RosalindaAPI_v2"+domain);
+
+					String requestToken = jsonToken.getString("signature");
+
 					if ("H4Qah6MbqrkxPFTH".equalsIgnoreCase(jsonToken.getString("partner_id")) 
-							&& getMd5("H4Qah6MbqrkxPFTH"+domain).equalsIgnoreCase(jsonToken.getString("signature"))) {
+							&& (requestToken.equalsIgnoreCase(apiKey) || requestToken.equalsIgnoreCase(apiKey2))) {
 						return true;
 					}
 				} catch (Exception e) {

@@ -1582,6 +1582,13 @@ public class AppParams {
 	public static final String S_DROPSHIP_ADDING_PRICE = "S_DROPSHIP_ADDING_PRICE";
 	public static final String S_DROPSHIP_EXPRESS_PRICE = "S_DROPSHIP_EXPRESS_PRICE";
 	public static final String S_DROPSHIP_EXPRESS_ADDING_PRICE = "S_DROPSHIP_EXPRESS_ADDING_PRICE";
+	
+	
+	//Fulfillment
+	public static final String S_PRODUCT_SKU = "S_PRODUCT_SKU";
+	public static final String COREL = "corel";
+	public static final String ASSIGNED_PRODUCTS = "assigned_products";
+	public static final String ASSIGNED_CAMPAIGNS = "assigned_campaigns";
 	public static final String S_TAX_AMOUNT_EXPRESS = "S_TAX_AMOUNT_EXPRESS";
 	public static final String TAX_AMOUNT_EXPRESS = "tax_amount_express";
 	public static final String EXPRESS = "express";
@@ -1608,4 +1615,7 @@ public class AppParams {
 	public static final String TRUE = "TRUE";
 	public static final String FALSE = "FALSE";
 	public static final String N_DESIGN_FRONT = "N_DESIGN_FRONT";
+	public static final String IOSS_NUMBER = "ioss_number";
+	public static final String S_IOSS_NUMBER = "S_IOSS_NUMBER";
+	public static final String S_TAX_RATE = "S_TAX_RATE";
 }

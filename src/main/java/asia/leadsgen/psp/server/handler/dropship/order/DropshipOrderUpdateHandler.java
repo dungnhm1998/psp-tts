@@ -169,7 +169,7 @@ public class DropshipOrderUpdateHandler extends PSPOrderHandler implements Handl
 
 					NumberFormat amountFormatter = new DecimalFormat("#0.00");
 					dbOrderInfoMap = DropshipOrderService.updateOrderV2(orderId, amountFormatter.format(orderAmount),
-							orderCurrency, "", shippingId, storeId, referenceOrderId, totalItems, isAddrVerified, addrVerifiedNote, totalTax.toString(), totalShippingFee);
+							orderCurrency, "", shippingId, storeId, referenceOrderId, totalItems, isAddrVerified, addrVerifiedNote, totalTax.toString(), totalShippingFee,"");
 
 					routingContext.put(AppParams.RESPONSE_CODE, HttpResponseStatus.OK.code());
 					routingContext.put(AppParams.RESPONSE_MSG, HttpResponseStatus.OK.reasonPhrase());

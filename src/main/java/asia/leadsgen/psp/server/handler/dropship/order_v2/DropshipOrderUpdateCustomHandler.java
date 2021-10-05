@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import asia.leadsgen.psp.obj.DropshipOrderProductTypeObj;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang.StringUtils;
 
@@ -117,6 +118,13 @@ public class DropshipOrderUpdateCustomHandler extends PSPOrderHandler implements
 						}
 					}
 				}
+
+				String iossNumber = ParamUtil.getString(requestOrderInfoMap, AppParams.IOSS_NUMBER);
+				Boolean isValidIossNumber = OrderUtil.checkValidIossNumber(iossNumber);
+
+				if (!isValidIossNumber) {
+					throw new BadRequestException(SystemError.INVALID_IOSS_NUMBER);
+				}
 				
 				String dbOrderState = ParamUtil.getString(dbOrderInfoMap, AppParams.STATE);
 				LOGGER.info("OrderId= " + orderId + " - Order State= " + dbOrderState);
@@ -221,21 +229,16 @@ public class DropshipOrderUpdateCustomHandler extends PSPOrderHandler implements
 						Map shippingInfo = ProductUtil.getShippingInfoForListItems(setBaseId, shippingCountryCode, shippingMethod);
 
 						Map countryTax = CountryTaxService.getTaxByCountry(shippingCountryCode);
-						
-						List<Map> allBase = new ArrayList<Map>();
-
-				        Map listBase = BaseService.getAllBaseCache();
-				        listBase.forEach((k, v) -> allBase.addAll((Collection<? extends Map>) v));
 
 						for (Map requestItem : requestOrderItemList) {
 							String itemId = ParamUtil.getString(requestItem, AppParams.ID);
 
 							if (StringUtils.isEmpty(itemId)) {
 								LOGGER.info("itemId is Empty... ");
-								orderItem = createOrderItem(orderId, requestItem, orderCurrency, shippingCountryCode, userId, source, shippingMethod, referenceOrderId, shippingInfo, countryTax, allBase);
+								orderItem = createOrderItem(orderId, requestItem, orderCurrency, shippingCountryCode, userId, source, shippingMethod, referenceOrderId, shippingInfo, countryTax, iossNumber);
 							} else {
 								LOGGER.info("itemId= " + itemId);
-								orderItem = updateOrderItem(orderId, shippingCountryCode, requestItem, userId, source, shippingMethod, shippingInfo, countryTax, allBase);
+								orderItem = updateOrderItem(orderId, shippingCountryCode, requestItem, userId, source, shippingMethod, shippingInfo, countryTax, iossNumber);
 							}
 							LOGGER.info("orderItem: " + orderItem.toString());
 
@@ -249,9 +252,9 @@ public class DropshipOrderUpdateCustomHandler extends PSPOrderHandler implements
 					DropshipOrderProductService.updateShippingMethod(orderId, shippingMethod);
 					NumberFormat amountFormatter = new DecimalFormat("#0.00");
 					totalTax = GetterUtil.format(totalTax, 2);
-					
+
 					dbOrderInfoMap = DropshipOrderService.updateOrderV2(orderId, amountFormatter.format(orderAmount),
-							orderCurrency, "", shippingId, storeId, referenceOrderId, totalItems, isAddrVerified, addrVerifiedNote, totalTax.toString(), totalShippingFee);
+							orderCurrency, "", shippingId, storeId, referenceOrderId, totalItems, isAddrVerified, addrVerifiedNote, totalTax.toString(), totalShippingFee, iossNumber);
 
 					routingContext.put(AppParams.RESPONSE_CODE, HttpResponseStatus.OK.code());
 					routingContext.put(AppParams.RESPONSE_MSG, HttpResponseStatus.OK.reasonPhrase());
@@ -431,7 +434,7 @@ public class DropshipOrderUpdateCustomHandler extends PSPOrderHandler implements
 	 * @throws SQLException
 	 */
 	private Map createOrderItem(String orderId, Map requestItem, String orderCurrency, String shippingCountryCode,
-								String userId, String source, String shippingMethod, String referenceOrderId, Map shippingInfo, Map countryTax, List<Map> allBase)
+								String userId, String source, String shippingMethod, String referenceOrderId, Map shippingInfo, Map countryTax, String iossNumber)
 			throws SQLException {
 		
 		LOGGER.info("requestItem: " + requestItem.toString());
@@ -448,33 +451,46 @@ public class DropshipOrderUpdateCustomHandler extends PSPOrderHandler implements
         String colorNameDB = "";
         String sizeNameDB = "";
         
-        boolean checkBaseMap = allBase.stream().filter(m -> (m.get(AppParams.BASE_ID)).equals(baseId)).findFirst().isPresent();
-        LOGGER.info("checkBaseMap: " + checkBaseMap);
-        if (checkBaseMap) {
-        	Map baseMap = allBase.stream().filter(m -> (m.get(AppParams.BASE_ID)).equals(baseId)).findFirst().get();
-        	
-        	List<Map> colorList = ParamUtil.getListData(baseMap, AppParams.COLORS);
-        	boolean checkColorMap = colorList.stream().filter(m -> (m.get(AppParams.ID)).equals(colorId)).findFirst().isPresent();
-        	if (checkColorMap) {
-        		Map colorMap = colorList.stream().filter(m -> (m.get(AppParams.ID)).equals(colorId)).findFirst().get();
-        		colorNameDB = ParamUtil.getString(colorMap, AppParams.NAME);
-        		colorValueDB = ParamUtil.getString(colorMap, AppParams.VALUE);
-        	}
-        	
-        	List<Map> sizeList = ParamUtil.getListData(baseMap, AppParams.SIZES);
-        	boolean checkSizeMap = sizeList.stream().filter(m -> (m.get(AppParams.ID)).equals(sizeId)).findFirst().isPresent();
-        	if (checkSizeMap) {
-        		Map sizeMap = sizeList.stream().filter(m -> (m.get(AppParams.ID)).equals(sizeId)).findFirst().get();
-        		sizeNameDB = ParamUtil.getString(sizeMap, AppParams.NAME);
-        	}
+//        boolean checkBaseMap = allBase.stream().filter(m -> (m.get(AppParams.BASE_ID)).equals(baseId)).findFirst().isPresent();
+//        LOGGER.info("checkBaseMap: " + checkBaseMap);
+//        if (checkBaseMap) {
+//        	Map baseMap = allBase.stream().filter(m -> (m.get(AppParams.BASE_ID)).equals(baseId)).findFirst().get();
+//        	
+//        	List<Map> colorList = ParamUtil.getListData(baseMap, AppParams.COLORS);
+//        	boolean checkColorMap = colorList.stream().filter(m -> (m.get(AppParams.ID)).equals(colorId)).findFirst().isPresent();
+//        	if (checkColorMap) {
+//        		Map colorMap = colorList.stream().filter(m -> (m.get(AppParams.ID)).equals(colorId)).findFirst().get();
+//        		colorNameDB = ParamUtil.getString(colorMap, AppParams.NAME);
+//        		colorValueDB = ParamUtil.getString(colorMap, AppParams.VALUE);
+//        	}
+//        	
+//        	List<Map> sizeList = ParamUtil.getListData(baseMap, AppParams.SIZES);
+//        	boolean checkSizeMap = sizeList.stream().filter(m -> (m.get(AppParams.ID)).equals(sizeId)).findFirst().isPresent();
+//        	if (checkSizeMap) {
+//        		Map sizeMap = sizeList.stream().filter(m -> (m.get(AppParams.ID)).equals(sizeId)).findFirst().get();
+//        		sizeNameDB = ParamUtil.getString(sizeMap, AppParams.NAME);
+//        	}
+//        }
+        
+        Map baseMap = BaseService.get(baseId);
+        if (baseMap == null || baseMap.isEmpty()) {
+        	throw new BadRequestException(SystemError.INVALID_BASE_ID);
         }
+        
+        List<Map> colorList = ParamUtil.getListData(baseMap, AppParams.COLORS);
+        boolean checkColorMap = colorList.stream().filter(m -> (m.get(AppParams.ID)).equals(colorId)).findFirst().isPresent();
+    	if (checkColorMap) {
+    		Map colorMap = colorList.stream().filter(m -> (m.get(AppParams.ID)).equals(colorId)).findFirst().get();
+    		colorNameDB = ParamUtil.getString(colorMap, AppParams.NAME);
+    		colorValueDB = ParamUtil.getString(colorMap, AppParams.VALUE);
+    	}
+        
+    	Map<String, String> baseSizeMap = BaseService.getBaseSizeMap();
+    	sizeNameDB = baseSizeMap.get(sizeId);
+    	
         LOGGER.info("get colorNameDB: " + colorNameDB);
         LOGGER.info("get colorValueDB: " + colorValueDB);
         LOGGER.info("get sizeNameDB: " + sizeNameDB);
-        
-        if (StringUtils.isEmpty(colorNameDB) || StringUtils.isEmpty(sizeNameDB)) {
-        	throw new BadRequestException(SystemError.INVALID_BASE_ID);
-        }
         
         if (!colorNameDB.equalsIgnoreCase(colorName) || !sizeNameDB.equalsIgnoreCase(sizeName)) {
         	LOGGER.info("INVALID COLOR_ID OR SIZE_ID");
@@ -508,14 +524,9 @@ public class DropshipOrderUpdateCustomHandler extends PSPOrderHandler implements
 		String designBackUrlMd5 = ParamUtil.getString(designMap, AppParams.DESIGN_BACK_URL_MD5);
 		if (StringUtils.isEmpty(campaignId)) {
 			campaignId = userId + "-";
-			String md5 = "";
-			try {
-				md5 = Common.getMD5(designFrontUrlMd5 + designBackUrlMd5);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+			String uuid = Common.getUUID();
 			if (StringUtils.isNotEmpty(designFrontUrlMd5) || StringUtils.isNotEmpty(designBackUrlMd5)) {
-				campaignId = campaignId + md5;
+				campaignId = campaignId + uuid;
 			} else {
 				LOGGER.info("INVALID_DESIGN");
 				throw new BadRequestException(SystemError.INVALID_DESIGN);
@@ -538,23 +549,29 @@ public class DropshipOrderUpdateCustomHandler extends PSPOrderHandler implements
 
 		double productAmount = GetterUtil.format(baseCost * quantity + shippingFee, 2);
 		LOGGER.info("+++productAmount = " + productAmount);
-		Double taxAmount = OrderUtil.getTaxByAmountAndByCountry(productAmount,countryTax);
+//		Double taxAmount = OrderUtil.getTaxByAmountAndByCountry(productAmount, countryTax, iossNumber);
+		Double taxAmount =0d;
+		if (StringUtils.isEmpty(iossNumber)) {
+			taxAmount = OrderUtil.getTaxByAmountAndByCountry(productAmount, countryTax);
+		}
+
 		productAmount = GetterUtil.format(productAmount + taxAmount, 2);
 		LOGGER.info("+++taxAmount = " + taxAmount);
 
-		DropshipOrderProductObj dropshipOrderProduct = new DropshipOrderProductObj.Builder(orderId)
+		DropshipOrderProductTypeObj dropshipOrderProduct = DropshipOrderProductTypeObj.builder()
+				.orderId(orderId)
 				.campaignId(campaignId)
 				.productId(productId)
 				.variantId(variantId)
 				.sizeId(sizeId)
-				.price(baseCost)
-				.shippingFee(shippingFee)
+				.price(String.valueOf(baseCost))
+				.shippingFee(String.valueOf(shippingFee))
 				.currency("USD")
 				.quantity(quantity)
 				.state(ResourceStates.APPROVED)
 				.variantName(variantName)
-				.amount(productAmount)
-				.baseCost(baseCost)
+				.amount(String.valueOf(productAmount))
+				.baseCost(String.valueOf(baseCost))
 				.baseId(baseId)
 				.lineItemId(referenceOrderId)
 				.variantFrontUrl(mockupFrontUrl)
@@ -568,11 +585,11 @@ public class DropshipOrderUpdateCustomHandler extends PSPOrderHandler implements
 				.designFrontUrl(designFrontUrl)
 				.designBackUrl(designBackUrl)
 				.unitAmount(unitAmount)
-				.taxAmount(taxAmount)
+				.taxAmount(String.valueOf(taxAmount))
 				.build();
 
 		LOGGER.info("orderProductObj: " + dropshipOrderProduct.toString());
-		Map orderItem = DropshipOrderProductService.insertDropshipOrderProduct(dropshipOrderProduct);
+		Map orderItem = DropshipOrderProductService.insertDropshipOrderProductV2(dropshipOrderProduct);
 		
 //		if (variantId != null && variantId.isEmpty() == false) {
 //			ShopifyAppService.orderProductUpdateThumbUrl(variantId, orderId);
@@ -582,7 +599,7 @@ public class DropshipOrderUpdateCustomHandler extends PSPOrderHandler implements
 	}
 
 	private Map updateOrderItem(String orderId, String shippingCountryCode, Map requestItem, String userId, String source,
-								String shippingMethod, Map shippingInfo, Map countryTax, List<Map> allBase) throws SQLException {
+								String shippingMethod, Map shippingInfo, Map countryTax, String iossNumber) throws SQLException {
 		
 		LOGGER.info("updateOrderItem... ");
 		LOGGER.info("requestItem= " + requestItem.toString());
@@ -601,33 +618,46 @@ public class DropshipOrderUpdateCustomHandler extends PSPOrderHandler implements
         String colorNameDB = "";
         String sizeNameDB = "";
         
-        boolean checkBaseMap = allBase.stream().filter(m -> (m.get(AppParams.BASE_ID)).equals(baseId)).findFirst().isPresent();
-        LOGGER.info("checkBaseMap: " + checkBaseMap);
-        if (checkBaseMap) {
-        	Map baseMap = allBase.stream().filter(m -> (m.get(AppParams.BASE_ID)).equals(baseId)).findFirst().get();
-        	
-        	List<Map> colorList = ParamUtil.getListData(baseMap, AppParams.COLORS);
-        	boolean checkColorMap = colorList.stream().filter(m -> (m.get(AppParams.ID)).equals(colorId)).findFirst().isPresent();
-        	if (checkColorMap) {
-        		Map colorMap = colorList.stream().filter(m -> (m.get(AppParams.ID)).equals(colorId)).findFirst().get();
-        		colorNameDB = ParamUtil.getString(colorMap, AppParams.NAME);
-        		colorValueDB = ParamUtil.getString(colorMap, AppParams.VALUE);
-        	}
-        	
-        	List<Map> sizeList = ParamUtil.getListData(baseMap, AppParams.SIZES);
-        	boolean checkSizeMap = sizeList.stream().filter(m -> (m.get(AppParams.ID)).equals(sizeId)).findFirst().isPresent();
-        	if (checkSizeMap) {
-        		Map sizeMap = sizeList.stream().filter(m -> (m.get(AppParams.ID)).equals(sizeId)).findFirst().get();
-        		sizeNameDB = ParamUtil.getString(sizeMap, AppParams.NAME);
-        	}
+//        boolean checkBaseMap = allBase.stream().filter(m -> (m.get(AppParams.BASE_ID)).equals(baseId)).findFirst().isPresent();
+//        LOGGER.info("checkBaseMap: " + checkBaseMap);
+//        if (checkBaseMap) {
+//        	Map baseMap = allBase.stream().filter(m -> (m.get(AppParams.BASE_ID)).equals(baseId)).findFirst().get();
+//        	
+//        	List<Map> colorList = ParamUtil.getListData(baseMap, AppParams.COLORS);
+//        	boolean checkColorMap = colorList.stream().filter(m -> (m.get(AppParams.ID)).equals(colorId)).findFirst().isPresent();
+//        	if (checkColorMap) {
+//        		Map colorMap = colorList.stream().filter(m -> (m.get(AppParams.ID)).equals(colorId)).findFirst().get();
+//        		colorNameDB = ParamUtil.getString(colorMap, AppParams.NAME);
+//        		colorValueDB = ParamUtil.getString(colorMap, AppParams.VALUE);
+//        	}
+//        	
+//        	List<Map> sizeList = ParamUtil.getListData(baseMap, AppParams.SIZES);
+//        	boolean checkSizeMap = sizeList.stream().filter(m -> (m.get(AppParams.ID)).equals(sizeId)).findFirst().isPresent();
+//        	if (checkSizeMap) {
+//        		Map sizeMap = sizeList.stream().filter(m -> (m.get(AppParams.ID)).equals(sizeId)).findFirst().get();
+//        		sizeNameDB = ParamUtil.getString(sizeMap, AppParams.NAME);
+//        	}
+//        }
+        
+        Map baseMap = BaseService.get(baseId);
+        if (baseMap == null || baseMap.isEmpty()) {
+        	throw new BadRequestException(SystemError.INVALID_BASE_ID);
         }
+        
+        List<Map> colorList = ParamUtil.getListData(baseMap, AppParams.COLORS);
+        boolean checkColorMap = colorList.stream().filter(m -> (m.get(AppParams.ID)).equals(colorId)).findFirst().isPresent();
+    	if (checkColorMap) {
+    		Map colorMap = colorList.stream().filter(m -> (m.get(AppParams.ID)).equals(colorId)).findFirst().get();
+    		colorNameDB = ParamUtil.getString(colorMap, AppParams.NAME);
+    		colorValueDB = ParamUtil.getString(colorMap, AppParams.VALUE);
+    	}
+        
+    	Map<String, String> baseSizeMap = BaseService.getBaseSizeMap();
+    	sizeNameDB = baseSizeMap.get(sizeId);
+    	
         LOGGER.info("get colorNameDB: " + colorNameDB);
         LOGGER.info("get colorValueDB: " + colorValueDB);
         LOGGER.info("get sizeNameDB: " + sizeNameDB);
-        
-        if (StringUtils.isEmpty(colorNameDB) || StringUtils.isEmpty(sizeNameDB)) {
-        	throw new BadRequestException(SystemError.INVALID_BASE_ID);
-        }
         
         if (!colorNameDB.equalsIgnoreCase(colorName) || !sizeNameDB.equalsIgnoreCase(sizeName)) {
         	LOGGER.info("INVALID COLOR_ID OR SIZE_ID");
@@ -656,14 +686,9 @@ public class DropshipOrderUpdateCustomHandler extends PSPOrderHandler implements
 
 		if (StringUtils.isEmpty(campaignId)) {
 			campaignId = userId + "-";
-			String md5 = "";
-			try {
-				md5 = Common.getMD5(designFrontUrlMd5 + designBackUrlMd5);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+			String uuid =  Common.getUUID();
 			if (StringUtils.isNotEmpty(designFrontUrlMd5) || StringUtils.isNotEmpty(designBackUrlMd5)) {
-				campaignId = campaignId + md5;
+				campaignId = campaignId + uuid;
 			} else {
 				LOGGER.info("INVALID_DESIGN");
 				throw new BadRequestException(SystemError.INVALID_DESIGN);
@@ -691,7 +716,12 @@ public class DropshipOrderUpdateCustomHandler extends PSPOrderHandler implements
 
 		double productAmount = GetterUtil.format(baseCost * quantity + shippingFee, 2);
 		LOGGER.info("+++productAmount = " + productAmount);
-		Double taxAmount = OrderUtil.getTaxByAmountAndByCountry(productAmount,countryTax);
+
+		Double taxAmount =0d;
+		if (StringUtils.isEmpty(iossNumber)) {
+			taxAmount = OrderUtil.getTaxByAmountAndByCountry(productAmount, countryTax);
+		}
+
 		productAmount = GetterUtil.format(productAmount + taxAmount, 2);
 		LOGGER.info("+++taxAmount = " + taxAmount);
 

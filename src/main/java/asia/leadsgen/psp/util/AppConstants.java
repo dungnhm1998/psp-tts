@@ -161,6 +161,9 @@ public class AppConstants {
 	public static final String SHOPBASE_AUTHENTICATION_URL = "onshopbase.com/admin/oauth/access_token.json";
 	public static final String SHOPBASE_STORE_LOCATION = "https://%s/admin/locations.json";
 	public static final String CREATE_WEBHOOK = "https://%s/admin/webhooks.json";
+
+	public static final String PARTNER_NOTIFICATION_EMAIL = "partner_notification";
+	
 	
 	public static final String UTF8_BOM_CHAR = "\ufeff";
 }

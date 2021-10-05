@@ -87,6 +87,8 @@ import asia.leadsgen.psp.server.handler.dropship.woo.WooCommerceMapAttribute;
 import asia.leadsgen.psp.server.handler.etsy.EtsyConnectAuthHandler;
 import asia.leadsgen.psp.server.handler.etsy.EtsyConnectHandler;
 import asia.leadsgen.psp.server.handler.fraud.FraudHandler;
+import asia.leadsgen.psp.server.handler.fulfillment.AssignedItemToPartnerHandler;
+import asia.leadsgen.psp.server.handler.fulfillment.DesignPrintCreateHandler;
 import asia.leadsgen.psp.server.handler.fulfillment.ExportProductHandler;
 import asia.leadsgen.psp.server.handler.fulfillment.GetShippingConfigHandler;
 import asia.leadsgen.psp.server.handler.fulfillment.OrderProductUpdateFulfillmentReviewHandler;
@@ -408,6 +410,8 @@ public class PSPVertical extends AbstractVerticle {
 		router.route(HttpMethod.POST, "/fulfillment/export").handler(new ExportProductHandler());
 
 		router.route(HttpMethod.GET, "/get-shipping-config").handler(new GetShippingConfigHandler());
+		router.route(HttpMethod.POST, "/create-design-print/:id").handler(new DesignPrintCreateHandler());
+		router.route(HttpMethod.POST, "/assigned-to-partner").handler(new AssignedItemToPartnerHandler());
 		return router;
 	}
 
@@ -475,7 +479,7 @@ public class PSPVertical extends AbstractVerticle {
 	private Router initWebhooksRouter() {
 		Router router = Router.router(vertx);
 		router.route(HttpMethod.POST, "/webhooks/trackingmore-b2d6e422-83b9").handler(new TrackingMoreEventHandler());
-		router.route(HttpMethod.POST, "/webhooks/iterloan").handler(new IterloanWebhookHandler());
+		router.route(HttpMethod.POST, "/webhooks/interloan").handler(new IterloanWebhookHandler());
 		return router;
 	}
 	

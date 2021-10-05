@@ -119,13 +119,12 @@ public class ClientAuthorizationHandler implements Handler<RoutingContext> {
 		} else if (methodName.equalsIgnoreCase(HttpMethod.GET.name()) && requestUri.contains("/dropship/v2/orders")) {
 			routingContext.next();
 			// DO NOTHING
-		}
-		
-		else if ((methodName.equalsIgnoreCase(HttpMethod.GET.name()) || methodName.equalsIgnoreCase(HttpMethod.POST.name())) && requestUri.contains("/warehouse")) {
+		}else if ((methodName.equalsIgnoreCase(HttpMethod.GET.name()) || methodName.equalsIgnoreCase(HttpMethod.POST.name())) && requestUri.contains("/warehouse")) {
 			routingContext.next();
-		}
-
-		else if (methodName.equalsIgnoreCase(HttpMethod.POST.name())
+		} else if (methodName.equalsIgnoreCase(HttpMethod.PUT.name())
+				&& requestUri.contains("/assigned-to-partner")) {
+			routingContext.next();
+		} else if (methodName.equalsIgnoreCase(HttpMethod.POST.name())
 				&& requestUri.contains("/dropship/payment/paypal")) {
 			routingContext.next();
 			// DO NOTHING

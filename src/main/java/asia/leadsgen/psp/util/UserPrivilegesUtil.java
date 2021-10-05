@@ -184,6 +184,8 @@ public class UserPrivilegesUtil {
 		publicAPIs.add(addPublicApi("POST", "/warehouse/update-orders"));
 		publicAPIs.add(addPublicApi("GET", "/warehouse/list-orders"));
 		
+		publicAPIs.add(addPublicApi("PUT", "/assigned-to-partner"));
+		
 	}
 
 	private static Map addPublicApi(String method, String requestURI) {

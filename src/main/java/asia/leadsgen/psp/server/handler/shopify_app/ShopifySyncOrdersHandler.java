@@ -15,6 +15,9 @@ import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import asia.leadsgen.psp.obj.DropshipOrderProductTypeObj;
+import asia.leadsgen.psp.obj.DropshipOrderTypeObj;
+import asia.leadsgen.psp.service_fulfill.DropshipOrderServiceV2;
 import org.apache.commons.lang.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -647,15 +650,16 @@ public class ShopifySyncOrdersHandler extends PSPOrderHandler implements Handler
 		String trackingNumber = AppUtil.generateOrderTrackingNumber();
 		String orderIdPrefix = userId + "-SPF-APP";
 
-		DropshipOrderObj dropshipOrderObj = new DropshipOrderObj.Builder(orderIdPrefix)
-				.orderCurrency("USD")
+		DropshipOrderTypeObj dropshipOrderObj = DropshipOrderTypeObj.builder()
+				.idPrefix(orderIdPrefix)
+				.currency("USD")
 				.state(state)
 				.shippingId(shippingId)
-				.trackingNumber(trackingNumber)
+				.trackingCode(trackingNumber)
 				.channel(channel)
 				.storeId(storeId)
 				.userId(userId)
-				.referenceOrderId(referenceOrderId)
+				.referenceOrder(referenceOrderId)
 				.source(source)
 				.minifiedJson(body_string)
 				.originalId(originalId)
@@ -663,7 +667,7 @@ public class ShopifySyncOrdersHandler extends PSPOrderHandler implements Handler
 				.build();
 		LOGGER.info("dropshipOrderObj=" + dropshipOrderObj.toString());
 
-		order = DropshipOrderService.insertDropshipOrder(dropshipOrderObj);
+		order = DropshipOrderServiceV2.insertDropshipOrderV2(dropshipOrderObj);
 
 		if (!order.isEmpty()) {
 			
@@ -911,19 +915,20 @@ public class ShopifySyncOrdersHandler extends PSPOrderHandler implements Handler
 		partnerProperties.put(AppParams.PARTNER_DESIGN_FRONT, partnerDesignFront);
 		partnerProperties.put(AppParams.PARTNER_DESIGN_FRONT, partnerDesignBack);
 
-		DropshipOrderProductObj orderProductObj = new DropshipOrderProductObj.Builder(orderId)
+		DropshipOrderProductTypeObj orderProductObj = DropshipOrderProductTypeObj.builder()
+				.orderId(orderId)
 				.campaignId(campaignId)
 				.productId(bgp_product_id)
 				.variantId(bgp_variant_id)
 				.sizeId(sizeId)
-				.price(baseCost)
-				.shippingFee(shippingFee)
+				.price(String.valueOf(baseCost))
+				.shippingFee(String.valueOf(shippingFee))
 				.currency("USD")
 				.quantity(quantity)
 				.state(ResourceStates.APPROVED)
 				.variantName(variantName)
-				.amount(productAmount)
-				.baseCost(baseCost)
+				.amount(String.valueOf(productAmount))
+				.baseCost(String.valueOf(baseCost))
 				.baseId(baseId)
 				.lineItemId(lineItemId)
 				.variantFrontUrl(variantFrontUrl)
@@ -939,11 +944,11 @@ public class ShopifySyncOrdersHandler extends PSPOrderHandler implements Handler
 				.partnerProperties(partnerProperties.toString())
 				.partnerOption(partnerOption.toString())
 //				.baseShortCode(baseShortCode)
-				.taxAmount(taxAmount)
+				.taxAmount(String.valueOf(taxAmount))
 				.build();
 
 		LOGGER.info("orderProductObj: " + orderProductObj.toString());
-		Map orderItem = DropshipOrderProductService.insertDropshipOrderProduct(orderProductObj);
+		Map orderItem = DropshipOrderProductService.insertDropshipOrderProductV2(orderProductObj);
 		
 		if (orderItem != null && orderItem.isEmpty() == false) {
 			orderItem.put(AppParams.SUBTOTAL, productSubTotal);
